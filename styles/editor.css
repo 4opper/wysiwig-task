@@ -64,6 +64,7 @@
   outline: 0;
   cursor: pointer;
   opacity: 60%;
+  user-select: none;
 }
 
 .editor .toolkit > button:hover {
