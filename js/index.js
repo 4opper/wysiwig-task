@@ -1,5 +1,5 @@
-import { Caret } from './js/Caret'
-import { Editor } from './js/Editor'
+import { Caret } from './Caret'
+import { Editor } from './Editor'
 
 init()
 
