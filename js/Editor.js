@@ -1,3 +1,12 @@
+// TODO handle case by case:
+// 1) zero elements selected: a) before word, b) after word, c) in the middle of the word
+// 2) single element:
+//   2.1) without selection
+//   2.2) with full selection
+//   2.3) with partial selection
+// so on...
+// TODO implement turning style off
+// TODO make it work for already styled text (nested text)
 export class Editor {
   static getSelection = () => window.getSelection()
 
@@ -62,71 +71,61 @@ export class Editor {
     const { selectedDOMNodes, range } = Editor.getSelectedNodes()
     const { startOffset, endOffset, collapsed } = range
 
-    // TODO handle case by case:
-    // 1) zero elements selected: a) before word, b) after word, c) in the middle of the word
-    // 2) single element:
-    //   2.1) without selection
-    //   2.2) with full selection
-    //   2.3) with partial selection
-    // so on...
-    // TODO Should update only part of string - seems can use insertNode/surroundContents
-    // TODO apply for the full word if nothing is selected
-    // TODO implement turning style off
-    // TODO make it work for already styled text (nested text)
     const updatedSelectedNodes = []
     selectedDOMNodes.forEach(node => {
       if (node.nodeValue) {
+        // Single DOM node
         if (selectedDOMNodes.length === 1) {
           let nodeToSelect = node
+          let startOffsetToUse = startOffset
+          let endOffsetToUse = endOffset
 
+          // Nothing is selected
           if (collapsed) {
             const charBeforeCaret = node.nodeValue[startOffset - 1]
             const charAfterCaret = node.nodeValue[startOffset]
 
 
             // Inside word
-            // TODO restore cater position
             if (charBeforeCaret && charBeforeCaret !== ' ' && charAfterCaret &&  charAfterCaret !== ' ') {
               const { range: wordRange } = this.caret.selectWordAtCaret()
               const word = wordRange.toString()
               const start = node.nodeValue.slice(0, wordRange.startOffset)
               const end = node.nodeValue.slice(wordRange.endOffset, node.length)
-
-
               const italicNode = document.createElement('i')
+
               italicNode.append(word)
 
               node.replaceWith(start, italicNode, end)
-              updatedSelectedNodes.push(italicNode)
-              nodeToSelect = italicNode
 
+              updatedSelectedNodes.push(italicNode)
+
+              nodeToSelect = italicNode.firstChild
+              startOffsetToUse = startOffset - start.length
+              endOffsetToUse = startOffset - start.length
             }
 
             if (updatedSelectedNodes.length) {
               this.setIsItalicIconActive(!this.isItalicActive)
 
-              // Editor.selectRange({
-              //   startNode: nodeToSelect,
-              //   startOffset,
-              //   endNode: nodeToSelect,
-              //   endOffset,
-              // })
+              Editor.selectRange({
+                startNode: nodeToSelect,
+                startOffset: startOffsetToUse,
+                endNode: nodeToSelect,
+                endOffset: endOffsetToUse,
+              })
 
             }
 
             return
+
+            // Inner part of word is selected
           } else if (startOffset !== 0 && endOffset !== 0) {
-            // const start = node.nodeValue.slice(0, startOffset)
-            // const selected = node.nodeValue.slice(startOffset, endOffset)
-            // const end = node.nodeValue.slice(endOffset, node.length)
             const italicNode = document.createElement('i')
 
-            // range.insertNode(italicNode)
             range.surroundContents(italicNode)
             updatedSelectedNodes.push(italicNode)
           }
-
-          // debugger
         } else {
           const italicNode = document.createElement('i')
           italicNode.innerHTML = node.nodeValue
