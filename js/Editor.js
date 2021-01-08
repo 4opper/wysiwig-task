@@ -1,15 +1,7 @@
-// TODO handle case by case:
-// 1) zero elements selected: a) before word, b) after word, c) in the middle of the word
-// 2) single element:
-//   2.1) without selection
-//   2.2) with full selection
-//   2.3) with partial selection
-// so on...
+// TODO handle when not first and last lines are selected, but multiple lines are selected
 // TODO implement turning style off
 // TODO make it work for already styled text (nested text)
 export class Editor {
-  static getSelection = () => window.getSelection()
-
   static selectRange = ({
     startNode,
     startOffset = 0,
@@ -17,7 +9,7 @@ export class Editor {
     endOffset = 1,
   }) => {
     const range = document.createRange()
-    const selection = getSelection()
+    const selection = document.getSelection()
 
     selection.removeAllRanges()
     range.setStart(startNode, startOffset)
@@ -26,21 +18,19 @@ export class Editor {
   }
 
   static getSelectedNodes = () => {
-    const range = Editor.getSelection().getRangeAt(0)
-    const selectedDOMNodes = []
+    const range = document.getSelection().getRangeAt(0)
+    const selectedLines = []
     let shouldIterate = true
     let currentNodeElement = range.startContainer
 
     while (shouldIterate) {
 
-      // if (range.startOffset === 0 && range.endOffset === 0) {
-      selectedDOMNodes.push(currentNodeElement.firstChild || currentNodeElement)
+      selectedLines.push(currentNodeElement.firstChild || currentNodeElement)
       shouldIterate = (currentNodeElement.firstChild || currentNodeElement) !== range.endContainer
       currentNodeElement = currentNodeElement.nextSibling
-      // }
     }
 
-    return { selectedDOMNodes, range }
+    return { selectedLines, range }
   }
   
   constructor (caret) {
@@ -68,35 +58,33 @@ export class Editor {
   }
 
   handleItalicClick = () => {
-    const { selectedDOMNodes, range } = Editor.getSelectedNodes()
-    const { startOffset, endOffset, collapsed } = range
+    const { selectedLines, range } = Editor.getSelectedNodes()
+    const { startContainer, startOffset, endContainer, endOffset, collapsed } = range
 
     const updatedSelectedNodes = []
-    selectedDOMNodes.forEach(node => {
-      if (node.nodeValue) {
-        // Single DOM node
-        if (selectedDOMNodes.length === 1) {
-          let nodeToSelect = node
+    selectedLines.forEach((line, index) => {
+      if (line.nodeValue) {
+        if (selectedLines.length === 1) /*Single line selected or has caret*/ {
+          console.log("single line")
+          let nodeToSelect = line
           let startOffsetToUse = startOffset
           let endOffsetToUse = endOffset
 
-          // Nothing is selected
-          if (collapsed) {
-            const charBeforeCaret = node.nodeValue[startOffset - 1]
-            const charAfterCaret = node.nodeValue[startOffset]
+          if (collapsed) /*Nothing is selected*/ {
+            console.log("nothing is selected")
+            const charBeforeCaret = line.nodeValue[startOffset - 1]
+            const charAfterCaret = line.nodeValue[startOffset]
 
-
-            // Inside word
-            if (charBeforeCaret && charBeforeCaret !== ' ' && charAfterCaret &&  charAfterCaret !== ' ') {
+            if (charBeforeCaret && charBeforeCaret !== ' ' && charAfterCaret &&  charAfterCaret !== ' ') /*Inside word*/ {
               const { range: wordRange } = this.caret.selectWordAtCaret()
               const word = wordRange.toString()
-              const start = node.nodeValue.slice(0, wordRange.startOffset)
-              const end = node.nodeValue.slice(wordRange.endOffset, node.length)
+              const start = line.nodeValue.slice(0, wordRange.startOffset)
+              const end = line.nodeValue.slice(wordRange.endOffset, line.length)
               const italicNode = document.createElement('i')
 
               italicNode.append(word)
 
-              node.replaceWith(start, italicNode, end)
+              line.replaceWith(start, italicNode, end)
 
               updatedSelectedNodes.push(italicNode)
 
@@ -118,22 +106,52 @@ export class Editor {
             }
 
             return
-
-            // Inner part of word is selected
-          } else if (startOffset !== 0 && endOffset !== 0) {
+          } else /*Any part of line is selected*/  {
+            console.log("inner part of word")
             const italicNode = document.createElement('i')
 
             range.surroundContents(italicNode)
             updatedSelectedNodes.push(italicNode)
           }
-        } else {
-          const italicNode = document.createElement('i')
-          italicNode.innerHTML = node.nodeValue
-          node.replaceWith(italicNode)
-          updatedSelectedNodes.push(italicNode)
+        } else /*Multiple line selected or has caret*/ {
+          const isFirstLine = line === selectedLines[0]
+          const isLastLine = line === selectedLines[selectedLines.length - 1]
+          
+          if ((isFirstLine && startOffset === 0) || (isLastLine && endOffset === endContainer.length) || (!isFirstLine && !isLastLine))  {
+            console.log("one of multiple lines is fully selected")
+            const italicNode = document.createElement('i')
+            const clonedNode = line.cloneNode()
+
+            italicNode.appendChild(clonedNode)
+            line.replaceWith(italicNode)
+            updatedSelectedNodes.push(italicNode)
+          } else {
+            if (isFirstLine) {
+              console.log("first of multiple lines is not fully selected")
+              const italicNode = document.createElement('i')
+              const notSelectedPart = line.nodeValue.slice(0, startOffset)
+              const selectedPart = line.nodeValue.slice(startOffset, line.length)
+
+              italicNode.append(selectedPart)
+              line.replaceWith(notSelectedPart, italicNode)
+              updatedSelectedNodes.push(italicNode)
+            }
+
+            if (isLastLine) {
+              console.log("last of multiple lines is not fully selected")
+              const italicNode = document.createElement('i')
+              const selectedPart = line.nodeValue.slice(0, endOffset)
+              const notSelectedPart = line.nodeValue.slice(endOffset, line.length)
+
+              italicNode.append(selectedPart)
+              line.replaceWith(italicNode, notSelectedPart)
+              updatedSelectedNodes.push(italicNode)
+            }
+          }
+
         }
       } else {
-        updatedSelectedNodes.push(node)
+        updatedSelectedNodes.push(line)
       }
     })
 

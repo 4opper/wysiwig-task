@@ -8,10 +8,10 @@ export class Caret {
     if (this.isContentEditable) {
       this.target.focus()
       let position = 0;
-      const selection = window.getSelection();
+      const selection = document.getSelection();
 
       if (selection.rangeCount !== 0) {
-        const range = window.getSelection().getRangeAt(0);
+        const range = document.getSelection().getRangeAt(0);
         const preCaretRange = range.cloneRange();
         preCaretRange.selectNodeContents(this.target);
         preCaretRange.setEnd(range.endContainer, range.endOffset);
@@ -33,7 +33,7 @@ export class Caret {
   }
 
   selectWordAtCaret = () => {
-    const selection = window.getSelection();
+    const selection = document.getSelection();
 
     if (!selection || selection.rangeCount < 1) return true;
 
