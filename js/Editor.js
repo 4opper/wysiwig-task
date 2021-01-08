@@ -1,56 +1,22 @@
 export class Editor {
   static getSelection = () => window.getSelection()
 
-  static selectRange = (startNode, endNode) => {
+  static selectRange = ({
+    startNode,
+    startOffset = 0,
+    endNode,
+    endOffset = 1,
+  }) => {
     const range = document.createRange()
     const selection = getSelection()
 
     selection.removeAllRanges()
-    range.setStart(startNode, 0)
-    range.setEnd(endNode, 1)
-
+    range.setStart(startNode, startOffset)
+    range.setEnd(endNode, endOffset)
     selection.addRange(range)
   }
 
-  isItalicActive = false
-
-  isHeadingActive = false
-
-  isSubheadingActive = false
-
-  isBoldActive = false
-
-  clearActiveButtons = () => {
-    this.setIsItalicIconActive(false)
-  }
-
-  setIsItalicIconActive = (isActive) => {
-    if (this.isItalicActive !== isActive) {
-      this.isItalicActive = isActive
-
-      const icon = document.querySelector('.italic')
-
-      if (isActive) {
-        icon.style.opacity = '100%'
-      } else {
-        icon.style.opacity = '60%'
-      }
-    }
-  }
-
-  handleHeadingClick = () => {
-    console.log('handleHeadingCLick', Editor.getSelection())
-  }
-
-  handleSubheadingClick = () => {
-    console.log('handleSubheadingClick', Editor.getSelection())
-  }
-
-  handleBoldClick = () => {
-    console.log('handleBoldClick', Editor.getSelection())
-  }
-
-  getSelectedNodes = () => {
+  static getSelectedNodes = () => {
     const range = Editor.getSelection().getRangeAt(0)
     const selectedDOMNodes = []
     let shouldIterate = true
@@ -67,9 +33,34 @@ export class Editor {
 
     return { selectedDOMNodes, range }
   }
+  
+  constructor (caret) {
+    this.caret = caret
+  }
+
+  isItalicActive = false
+
+  setIsItalicIconActive = (isActive) => {
+    if (this.isItalicActive !== isActive) {
+      this.isItalicActive = isActive
+
+      const icon = document.querySelector('.italic')
+
+      if (isActive) {
+        icon.style.opacity = '100%'
+      } else {
+        icon.style.opacity = '60%'
+      }
+    }
+  }
+
+  clearActiveButtons = () => {
+    this.setIsItalicIconActive(false)
+  }
 
   handleItalicClick = () => {
-    const { selectedDOMNodes, range } = this.getSelectedNodes()
+    const { selectedDOMNodes, range } = Editor.getSelectedNodes()
+    const { startOffset, endOffset, collapsed } = range
 
     // TODO handle case by case:
     // 1) zero elements selected: a) before word, b) after word, c) in the middle of the word
@@ -86,16 +77,45 @@ export class Editor {
     selectedDOMNodes.forEach(node => {
       if (node.nodeValue) {
         if (selectedDOMNodes.length === 1) {
-          // When nothing is selected
-          if (range.startOffset === range.endOffset) {
-            if (range.startOffset === 0) {
-              console.log("beginning of the word")
-            } else if (range.startOffset === node.length) {
-              console.log("end of the word")
-            } else {
-              console.log("inside of the word")
+          let nodeToSelect = node
+
+          if (collapsed) {
+            const charBeforeCaret = node.nodeValue[startOffset - 1]
+            const charAfterCaret = node.nodeValue[startOffset]
+
+
+            // Inside word
+            // TODO restore cater position
+            if (charBeforeCaret && charBeforeCaret !== ' ' && charAfterCaret &&  charAfterCaret !== ' ') {
+              const { range: wordRange } = this.caret.selectWordAtCaret()
+              const word = wordRange.toString()
+              const start = node.nodeValue.slice(0, wordRange.startOffset)
+              const end = node.nodeValue.slice(wordRange.endOffset, node.length)
+
+
+              const italicNode = document.createElement('i')
+              italicNode.append(word)
+
+              node.replaceWith(start, italicNode, end)
+              updatedSelectedNodes.push(italicNode)
+              nodeToSelect = italicNode
+
             }
-          } else if (range.startOffset !== 0 && range.endOffset !== 0) {
+
+            if (updatedSelectedNodes.length) {
+              this.setIsItalicIconActive(!this.isItalicActive)
+
+              // Editor.selectRange({
+              //   startNode: nodeToSelect,
+              //   startOffset,
+              //   endNode: nodeToSelect,
+              //   endOffset,
+              // })
+
+            }
+
+            return
+          } else if (startOffset !== 0 && endOffset !== 0) {
             // const start = node.nodeValue.slice(0, startOffset)
             // const selected = node.nodeValue.slice(startOffset, endOffset)
             // const end = node.nodeValue.slice(endOffset, node.length)
@@ -103,8 +123,6 @@ export class Editor {
 
             // range.insertNode(italicNode)
             range.surroundContents(italicNode)
-
-            // debugger
             updatedSelectedNodes.push(italicNode)
           }
 
@@ -120,10 +138,13 @@ export class Editor {
       }
     })
 
-    if (updatedSelectedNodes.length) {
+    if (updatedSelectedNodes.length && !collapsed) {
       this.setIsItalicIconActive(!this.isItalicActive)
 
-      Editor.selectRange(updatedSelectedNodes[0], updatedSelectedNodes[updatedSelectedNodes.length - 1])
+      Editor.selectRange({
+        startNode: updatedSelectedNodes[0],
+        endNode: updatedSelectedNodes[updatedSelectedNodes.length - 1],
+      })
     }
   }
 }

@@ -6,14 +6,16 @@ init()
 function init() {
   window.addEventListener('DOMContentLoaded', () => {
     const editorNode = document.querySelector('.edit-area')
-    const editor = new Editor()
-    const caret = new Caret(editorNode, editor)
+    const caret = new Caret(editorNode)
+    const editor = new Editor(caret)
 
-    document.querySelector('.head-1').addEventListener('click', editor.handleHeadingClick)
-    document.querySelector('.head-2').addEventListener('click', editor.handleSubheadingClick)
-    document.querySelector('.bold').addEventListener('click', editor.handleBoldClick)
+    const handlePosChanged = caret.createHandlePosChanged(editor)
+
+    // document.querySelector('.head-1').addEventListener('click', editor.handleHeadingClick)
+    // document.querySelector('.head-2').addEventListener('click', editor.handleSubheadingClick)
+    // document.querySelector('.bold').addEventListener('click', editor.handleBoldClick)
     document.querySelector('.italic').addEventListener('click', editor.handleItalicClick)
-    editorNode.addEventListener('click', caret.handlePosChanged)
-    document.addEventListener('keydown', caret.handlePosChanged)
+    editorNode.addEventListener('click', handlePosChanged)
+    document.addEventListener('keydown', handlePosChanged)
   })
 }
