@@ -23,8 +23,8 @@ export class Editor {
     let shouldIterate = true
     let currentNodeElement = range.startContainer
 
+    // Bug is here, try cases with multiple epmty rows selected together with some non empty ones
     while (shouldIterate) {
-
       selectedLines.push(currentNodeElement.firstChild || currentNodeElement)
       shouldIterate = (currentNodeElement.firstChild || currentNodeElement) !== range.endContainer
       currentNodeElement = currentNodeElement.nextSibling
