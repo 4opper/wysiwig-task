@@ -1,12 +1,9 @@
-// TODO implement turning style off
-// TODO check collapsed case
-// TODO fix case when there are multiple empty lines in the end and other text are selected and
-// after style update visual selection increases by 1 line and ctrl+A case
+// TODO mb perform normalize when unstyling
 // TODO make headings work in office
+// TODO get collapsed case back and make it work
+// TODO highlight buttons
 // TODO can try to get rid of filtered and simple selectedNodes to edit selection on selectionChanges
 // (filtered selectedNodes fixes case when end of prev line or start of next line is kinda selected, but no chars are selected on this prev/next line)
-// TODO mb perform normalize when unstyling
-// TODO fix ctrl + A doesnt style last node
 export class Editor {
   static selectRange = ({
     startNode,
@@ -134,10 +131,10 @@ export class Editor {
 
   handleActionClick = (tagName) => {
     const { selectedNodes, filteredSelectedNodes, range } = this.getSelectedNodes()
-    
+    console.log("selectedNodes: ", selectedNodes)
     if (!range) {
       console.log("not focused or nothing is selected")
-      return 
+      return
     }
     
     const { startContainer, startOffset, endContainer, endOffset, collapsed } = range
@@ -155,10 +152,27 @@ export class Editor {
       return isAlreadyWrapped
     })
 
-    if (isSelectionAlreadyWrapped) {
+    if (isSelectionAlreadyWrapped) /*remove styles case*/ {
       console.log("already wrapped")
-      filteredSelectedNodes.forEach((selectedNode) => {
+      selectedNodes.forEach((selectedNode) => {
+        if (!filteredSelectedNodes.includes(selectedNode)) {
+          console.log("selected node with 0 visually selected chars")
+          // case when end of prevLine or start of next line is selected
+          if (selectedNode.textContent.length !== 0) {
+            return
+          }
+
+          // Empty line case
+          updatedSelectedNodes.push(selectedNode)
+          return
+        }
+
         const textNodes = this.getSelectedTextNodes(selectedNode)
+        
+        if (!textNodes.length) {
+          console.log("selected line without text")
+          updatedSelectedNodes.push(selectedNode)
+        }
 
         textNodes.forEach((textNode, index) => {
           if (startContainer === endContainer) {
@@ -236,8 +250,21 @@ export class Editor {
 
         })
       })
-    } else {
-      filteredSelectedNodes.forEach((selectedNode, index) => {
+    } else /*add styles case*/ {
+      selectedNodes.forEach((selectedNode, index) => {
+        // debugger
+        if (!filteredSelectedNodes.includes(selectedNode)) {
+          console.log("selected node with 0 visually selected chars")
+          // case when end of prevLine or start of next line is selected
+          if (selectedNode.textContent.length !== 0) {
+            return
+          }
+
+          // Empty line case
+          updatedSelectedNodes.push(selectedNode)
+          return
+        }
+        
         const textNodes = this.getSelectedTextNodes(selectedNode)
         const isAlreadyWrapped = textNodes.every(textNode => {
           const textNodeParents = this.getNodeParentsUntil(textNode, this.editorNode)
@@ -248,7 +275,13 @@ export class Editor {
         if (isAlreadyWrapped) {
           console.log("whole node is already wrapped")
           const textNodes = this.getTextNodes(selectedNode)
-          updatedSelectedNodes.push(...textNodes)
+
+          if (textNodes.length) {
+            updatedSelectedNodes.push(...textNodes)
+          } else {
+            updatedSelectedNodes.push(selectedNode)
+          }
+
           return
         }
 
@@ -328,7 +361,12 @@ export class Editor {
           } else {
             console.log("text node is already wrapped")
             const textNodes = this.getTextNodes(selectedNode)
-            updatedSelectedNodes.push(...textNodes)
+
+            if (textNodes.length) {
+              updatedSelectedNodes.push(...textNodes)
+            } else {
+              updatedSelectedNodes.push(selectedNode)
+            }
           }
         })
       })
@@ -337,11 +375,12 @@ export class Editor {
     if (updatedSelectedNodes.length && !collapsed) {
       const startNode = updatedSelectedNodes[0]
       const endNode = updatedSelectedNodes[updatedSelectedNodes.length - 1]
+      console.log("updatedSelectedNodes: ", updatedSelectedNodes)
 
       Editor.selectRange({
         startNode,
         endNode: endNode,
-        endOffset: endNode.textContent.length
+        endOffset: endNode.textContent.length || undefined,
       })
     }
   }
