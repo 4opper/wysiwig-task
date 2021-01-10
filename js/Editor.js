@@ -215,16 +215,16 @@ export class Editor {
               return
             } else /*Any part of selectedNode is selected*/  {
               console.log("inner part of word or whole word")
+              const selectedText = range.toString()
+              const textBeforeSelected = textNode.data.slice(0, range.startOffset)
+              const textAfterSelected = textNode.data.slice(range.endOffset, textNode.length)
               const italicNode = document.createElement(tagName)
               if (tagName === 'h1' || tagName === 'h2') {
                 italicNode.style.display = 'inline'
               }
-              const clonedNode = textNode.cloneNode()
 
-
-              // range.surroundContents(italicNode)
-              italicNode.appendChild(clonedNode)
-              textNode.replaceWith(italicNode)
+              italicNode.append(selectedText)
+              textNode.replaceWith(textBeforeSelected, italicNode, textAfterSelected)
               updatedSelectedNodes.push(italicNode)
             }
           } else /*Multiple selectedNode selected or has caret*/ {
