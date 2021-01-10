@@ -1,37 +1,4 @@
 export class Caret {
-  constructor (target) {
-    this.target = target
-    this.isContentEditable = target && target.contentEditable
-  }
-
-  // getPos = () => {
-  //   if (this.isContentEditable) {
-  //     this.target.focus()
-  //     let position = 0;
-  //     const selection = document.getSelection();
-  //
-  //     if (selection.rangeCount !== 0) {
-  //       const range = document.getSelection().getRangeAt(0);
-  //       const preCaretRange = range.cloneRange();
-  //       preCaretRange.selectNodeContents(this.target);
-  //       preCaretRange.setEnd(range.endContainer, range.endOffset);
-  //       position = preCaretRange.toString().length;
-  //     }
-  //
-  //     return position;
-  //   }
-  //   return this.target.selectionStart
-  // }
-
-  // setPos = (pos) => {
-  //   if (this.isContentEditable) {
-  //     this.target.focus()
-  //     document.getSelection().collapse(this.target, pos)
-  //     return
-  //   }
-  //   this.target.setSelectionRange(pos, pos)
-  // }
-
   selectWordAtCaret = () => {
     const selection = document.getSelection();
 
@@ -61,21 +28,4 @@ export class Caret {
 
     return { range };
   }
-
-
-  // createHandlePosChanged = (editor) => () => {
-  //   this.target.focus()
-  //   let _range = document.getSelection().getRangeAt(0)
-  //   let range = _range.cloneRange()
-  //   range.selectNodeContents(this.target)
-  //   range.setEnd(_range.endContainer, _range.endOffset)
-  //
-  //   const parentNode = range.endContainer.parentNode
-  //
-  //   editor.clearActiveButtons()
-  //
-  //   if (parentNode.tagName === 'I') {
-  //     editor.setIsItalicIconActive(true)
-  //   }
-  // }
 }

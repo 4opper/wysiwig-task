@@ -120,26 +120,6 @@ export class Editor {
     this.editorNode = editorNode
   }
 
-  // isItalicActive = false
-  //
-  // setIsItalicIconActive = (isActive) => {
-  //   if (this.isItalicActive !== isActive) {
-  //     this.isItalicActive = isActive
-  //
-  //     const icon = document.querySelector('.italic')
-  //
-  //     if (isActive) {
-  //       icon.style.opacity = '100%'
-  //     } else {
-  //       icon.style.opacity = '60%'
-  //     }
-  //   }
-  // }
-  //
-  // clearActiveButtons = () => {
-  //   this.setIsItalicIconActive(false)
-  // }
-
   getNodeParentsUntil = (node, untilNode) => {
     const parentNodes = []
     let currentNode = node

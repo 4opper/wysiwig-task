@@ -7,10 +7,8 @@ function init() {
   window.addEventListener('DOMContentLoaded', () => {
     const testNode = document.querySelector('#test')
     const editorNode = document.querySelector('.edit-area')
-    const caret = new Caret(editorNode)
+    const caret = new Caret()
     const editor = new Editor(caret, editorNode)
-
-    // const handlePosChanged = caret.createHandlePosChanged(editor)
 
     document.querySelector('.head-1').addEventListener('click', () => {
       editor.handleH1Click()
@@ -31,9 +29,6 @@ function init() {
     editorNode.addEventListener('input', () => {
       updateTextNode(testNode, editorNode)
     })
-
-    // editorNode.addEventListener('click', handlePosChanged)
-    // document.addEventListener('keydown', handlePosChanged)
   })
 }
 
