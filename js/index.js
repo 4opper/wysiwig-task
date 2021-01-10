@@ -1,4 +1,3 @@
-import { Caret } from './Caret'
 import { Editor } from './Editor'
 
 init()
@@ -7,8 +6,7 @@ function init() {
   window.addEventListener('DOMContentLoaded', () => {
     const testNode = document.querySelector('#test')
     const editorNode = document.querySelector('.edit-area')
-    const caret = new Caret()
-    const editor = new Editor(caret, editorNode)
+    const editor = new Editor(editorNode)
 
     document.querySelector('.head-1').addEventListener('click', () => {
       editor.handleH1Click()

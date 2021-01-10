@@ -115,8 +115,7 @@ export class Editor {
     return allTextNodes.filter(textNode => document.getSelection().containsNode(textNode))
   }
   
-  constructor (caret, editorNode) {
-    this.caret = caret
+  constructor (editorNode) {
     this.editorNode = editorNode
   }
 
@@ -137,27 +136,22 @@ export class Editor {
     const { selectedNodes, filteredSelectedNodes, range } = this.getSelectedNodes()
     
     if (!range) {
-      console.log("not focused")
+      console.log("not focused or nothing is selected")
       return 
     }
     
     const { startContainer, startOffset, endContainer, endOffset, collapsed } = range
     const updatedSelectedNodes = []
 
-    // console.log("filteredSelectedNodes: ", filteredSelectedNodes)
-
     const isSelectionAlreadyWrapped = filteredSelectedNodes.every((selectedNode) => {
       const textNodes = this.getSelectedTextNodes(selectedNode)
-      // console.log("textNodes: ", textNodes)
 
       const isAlreadyWrapped = textNodes.every(textNode => {
         const textNodeParents = this.getNodeParentsUntil(textNode, this.editorNode)
-        // console.log("textNodeParents: ", textNodeParents)
 
         return textNodeParents.some(parentNode => parentNode.tagName.toLowerCase() === tagName)
       })
 
-      // console.log("isAlreadyWrapped: ", isAlreadyWrapped)
       return isAlreadyWrapped
     })
 
@@ -165,8 +159,6 @@ export class Editor {
       console.log("already wrapped")
       filteredSelectedNodes.forEach((selectedNode) => {
         const textNodes = this.getSelectedTextNodes(selectedNode)
-        // console.log("textNodes: ", textNodes)
-        // debugger
 
         textNodes.forEach((textNode, index) => {
           if (startContainer === endContainer) {
@@ -267,50 +259,6 @@ export class Editor {
           if (!isTextNodeAlreadyWrapped) {
             if (startContainer === endContainer) /*Single selectedNode selected or has caret*/ {
               console.log("single selectedNode")
-              // let nodeToSelect = textNode
-              // let startOffsetToUse = startOffset
-              // let endOffsetToUse = endOffset
-
-              // if (collapsed) /*Nothing is selected*/ {
-              //   console.log("nothing is selected")
-              //   const charBeforeCaret = textNode.data[startOffset - 1]
-              //   const charAfterCaret = textNode.data[startOffset]
-              //
-              //   if (charBeforeCaret && charBeforeCaret !== ' ' && charAfterCaret &&  charAfterCaret !== ' ') /*Inside word*/ {
-              //     const { range: wordRange } = this.caret.selectWordAtCaret()
-              //     const word = wordRange.toString()
-              //     const start = textNode.data.slice(0, wordRange.startOffset)
-              //     const end = textNode.data.slice(wordRange.endOffset, textNode.length)
-              //     const italicNode = document.createElement(tagName)
-              //     if (tagName === 'h1' || tagName === 'h2') {
-              //       italicNode.style.display = 'inline'
-              //     }
-              //
-              //     italicNode.append(word)
-              //
-              //     textNode.replaceWith(start, italicNode, end)
-              //
-              //     updatedSelectedNodes.push(italicNode.firstChild)
-              //
-              //     nodeToSelect = italicNode.firstChild
-              //     startOffsetToUse = startOffset - start.length
-              //     endOffsetToUse = startOffset - start.length
-              //   }
-              //
-              //   if (updatedSelectedNodes.length) {
-              //     // this.setIsItalicIconActive(!this.isItalicActive)
-              //
-              //     Editor.selectRange({
-              //       startNode: nodeToSelect,
-              //       startOffset: startOffsetToUse,
-              //       endNode: nodeToSelect,
-              //       endOffset: endOffsetToUse,
-              //     })
-              //
-              //   }
-              //
-              //   return
-              // }
               if (!collapsed) /*Any part of selectedNode is selected*/  {
                 console.log("inner part of word or whole word")
                 const replaceWithNodes = []
