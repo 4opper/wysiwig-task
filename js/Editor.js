@@ -305,8 +305,11 @@ export class Editor {
         textNodes.forEach((textNode, textNodeIndex) => {
           if (selectedNodeIndex === filteredSelectedNodes.length - 1 && textNodeIndex === textNodes.length - 1) {
             const lastVisuallySelectedNode = filteredSelectedNodes[filteredSelectedNodes.length - 1]
-            endContainer = lastVisuallySelectedNode
-            endOffset = lastVisuallySelectedNode.textContent.length
+
+            if (endContainer !== lastVisuallySelectedNode) {
+              endContainer = lastVisuallySelectedNode
+              endOffset = lastVisuallySelectedNode.textContent.length
+            }
           }
 
           const textNodeParents = this.getNodeParentsUntil(textNode, this.editorNode)
