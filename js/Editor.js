@@ -1,4 +1,3 @@
-// TODO make headings work in office
 // TODO get collapsed case back and make it work
 // TODO can try to get rid of filtered and simple selectedNodes to edit selection on selectionChanges
 // (filtered selectedNodes fixes case when end of prev line or start of next line is kinda selected, but no chars are selected on this prev/next line)
@@ -128,6 +127,31 @@ export class Editor {
     return parentNodes
   }
 
+  addStylesForHeading = (node, tagName) => {
+    const DEFAULT_FONT_SIZE = 16
+    node.style.fontWeight = 'bold'
+
+
+    if (tagName === 'h1') {
+      node.style.fontSize = `${DEFAULT_FONT_SIZE * 2}px`
+    }
+
+    if (tagName === 'h2') {
+      node.style.fontSize = `${DEFAULT_FONT_SIZE * 1.5}px`
+    }
+  }
+
+  createStyleNode = (tagName) => {
+    if (tagName !== 'h1' && tagName !== 'h2') {
+      return document.createElement(tagName)
+    }
+
+    const styleNode = document.createElement('span')
+    this.addStylesForHeading(styleNode, tagName)
+
+    return styleNode
+  }
+
   handleActionClick = (tagName) => {
     const { selectedNodes, filteredSelectedNodes, range } = this.getSelectedNodes()
     console.log("selectedNodes: ", selectedNodes)
@@ -169,7 +193,7 @@ export class Editor {
         const textNodes = this.getSelectedTextNodes(selectedNode)
         
         if (!textNodes.length) {
-          console.log("selected line without text")
+          console.log("selected node without text")
           updatedSelectedNodes.push(selectedNode)
         }
 
@@ -184,7 +208,7 @@ export class Editor {
             const textAfterSelected = textNode.data.slice(range.endOffset, textNode.length)
 
             if (textBeforeSelected) {
-              const tagNode = document.createElement(tagName)
+              const tagNode = this.createStyleNode(tagName)
               tagNode.append(textBeforeSelected)
               replaceWithNodes.push(tagNode)
             }
@@ -196,43 +220,43 @@ export class Editor {
             }
 
             if (textAfterSelected) {
-              const tagNode = document.createElement(tagName)
+              const tagNode = this.createStyleNode(tagName)
               tagNode.append(textAfterSelected)
               replaceWithNodes.push(tagNode)
             }
 
             styleNode.replaceWith(...replaceWithNodes)
           } else {
-            const isFirstLine = selectedNode === filteredSelectedNodes[0]
-            const isLastLine = selectedNode === filteredSelectedNodes[filteredSelectedNodes.length - 1]
+            const isFirstNode = selectedNode === filteredSelectedNodes[0]
+            const isLastNode = selectedNode === filteredSelectedNodes[filteredSelectedNodes.length - 1]
 
-            if ((isFirstLine && startOffset === 0) || (isLastLine && endOffset === endContainer.length) || (!isFirstLine && !isLastLine))  {
-              console.log("one of multiple lines is fully selected")
+            if ((isFirstNode && startOffset === 0) || (isLastNode && endOffset === endContainer.length) || (!isFirstNode && !isLastNode))  {
+              console.log("one of multiple nodes is fully selected")
               const textNodeParents = this.getNodeParentsUntil(textNode, this.editorNode)
               const styleNode = textNodeParents.find(parentNode => parentNode.tagName.toLowerCase() === tagName)
               styleNode.replaceWith(styleNode.firstChild)
               updatedSelectedNodes.push(textNode)
             } else {
-              if (isFirstLine) {
+              if (isFirstNode) {
                 const textNodeParents = this.getNodeParentsUntil(textNode, this.editorNode)
                 const styleNode = textNodeParents.find(parentNode => parentNode.tagName.toLowerCase() === tagName)
                 const notSelectedText = textNode.data.slice(0, startOffset)
                 const selectedText = textNode.data.slice(startOffset, textNode.length)
                 const textNodeWithoutStyle = document.createTextNode(selectedText)
-                const tagNode = document.createElement(tagName)
+                const tagNode = this.createStyleNode(tagName)
                 tagNode.append(notSelectedText)
 
                 styleNode.replaceWith(tagNode, textNodeWithoutStyle)
                 updatedSelectedNodes.push(textNodeWithoutStyle)
               }
 
-              if (isLastLine) {
+              if (isLastNode) {
                 const textNodeParents = this.getNodeParentsUntil(textNode, this.editorNode)
                 const styleNode = textNodeParents.find(parentNode => parentNode.tagName.toLowerCase() === tagName)
                 const selectedText = textNode.data.slice(0, endOffset)
                 const notSelectedText = textNode.data.slice(endOffset, textNode.length)
                 const textNodeWithoutStyle = document.createTextNode(selectedText)
-                const tagNode = document.createElement(tagName)
+                const tagNode = this.createStyleNode(tagName)
                 tagNode.append(notSelectedText)
 
                 styleNode.replaceWith(textNodeWithoutStyle, tagNode)
@@ -248,7 +272,7 @@ export class Editor {
       selectedNodes.forEach((selectedNode, selectedNodeIndex) => {
         if (!filteredSelectedNodes.includes(selectedNode)) {
           console.log("selected node with 0 visually selected chars")
-          // case when end of prevLine or start of next line is selected
+          // case when end of prev line or start of next line is selected
           if (selectedNode.textContent.length !== 0) {
             return
           }
@@ -297,11 +321,7 @@ export class Editor {
                 const selectedText = range.toString()
                 const textBeforeSelected = textNode.data.slice(0, range.startOffset)
                 const textAfterSelected = textNode.data.slice(range.endOffset, textNode.length)
-
-                const italicNode = document.createElement(tagName)
-                if (tagName === 'h1' || tagName === 'h2') {
-                  italicNode.style.display = 'inline'
-                }
+                const italicNode = this.createStyleNode(tagName)
 
                 if (textBeforeSelected) replaceWithNodes.push(textBeforeSelected)
                 if (selectedText) replaceWithNodes.push(italicNode)
@@ -312,27 +332,21 @@ export class Editor {
                 updatedSelectedNodes.push(italicNode.firstChild)
               }
             } else /*Multiple selectedNode selected or has caret*/ {
-              const isFirstLine = selectedNode === filteredSelectedNodes[0]
-              const isLastLine = selectedNode === filteredSelectedNodes[filteredSelectedNodes.length - 1]
+              const isFirstNode = selectedNode === filteredSelectedNodes[0]
+              const isLastNode = selectedNode === filteredSelectedNodes[filteredSelectedNodes.length - 1]
 
-              if ((isFirstLine && startOffset === 0) || (isLastLine && endOffset === endContainer.length) || (!isFirstLine && !isLastLine))  {
-                console.log("one of multiple lines is fully selected")
-                const italicNode = document.createElement(tagName)
-                if (tagName === 'h1' || tagName === 'h2') {
-                  italicNode.style.display = 'inline'
-                }
+              if ((isFirstNode && startOffset === 0) || (isLastNode && endOffset === endContainer.length) || (!isFirstNode && !isLastNode))  {
+                console.log("one of multiple nodes is fully selected")
+                const italicNode = this.createStyleNode(tagName)
                 const clonedNode = textNode.cloneNode()
 
                 italicNode.append(clonedNode)
                 textNode.replaceWith(italicNode)
                 updatedSelectedNodes.push(italicNode.firstChild)
               } else {
-                if (isFirstLine) {
-                  console.log("first of multiple lines is not fully selected")
-                  const italicNode = document.createElement(tagName)
-                  if (tagName === 'h1' || tagName === 'h2') {
-                    italicNode.style.display = 'inline'
-                  }
+                if (isFirstNode) {
+                  console.log("first of multiple nodes is not fully selected")
+                  const italicNode = this.createStyleNode(tagName)
                   const notSelectedText = textNode.data.slice(0, startOffset)
                   const selectedText = textNode.data.slice(startOffset, textNode.length)
 
@@ -341,12 +355,9 @@ export class Editor {
                   updatedSelectedNodes.push(italicNode.firstChild)
                 }
 
-                if (isLastLine) {
-                  console.log("last of multiple lines is not fully selected")
-                  const italicNode = document.createElement(tagName)
-                  if (tagName === 'h1' || tagName === 'h2') {
-                    italicNode.style.display = 'inline'
-                  }
+                if (isLastNode) {
+                  console.log("last of multiple nodes is not fully selected")
+                  const italicNode = this.createStyleNode(tagName)
                   const selectedText = textNode.data.slice(0, endOffset)
                   const notSelectedText = textNode.data.slice(endOffset, textNode.length)
 
