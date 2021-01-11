@@ -1,9 +1,8 @@
-// TODO mb perform normalize when unstyling
 // TODO make headings work in office
 // TODO get collapsed case back and make it work
-// TODO highlight buttons
 // TODO can try to get rid of filtered and simple selectedNodes to edit selection on selectionChanges
 // (filtered selectedNodes fixes case when end of prev line or start of next line is kinda selected, but no chars are selected on this prev/next line)
+// TODO highlight buttons
 export class Editor {
   static selectRange = ({
     startNode,
@@ -137,7 +136,7 @@ export class Editor {
       return
     }
     
-    const { startContainer, startOffset, endContainer, endOffset, collapsed } = range
+    let { startContainer, startOffset, endContainer, endOffset, collapsed } = range
     const updatedSelectedNodes = []
 
     const isSelectionAlreadyWrapped = filteredSelectedNodes.every((selectedNode) => {
@@ -243,16 +242,10 @@ export class Editor {
 
 
           }
-
-          // if (index === textNodes.length - 1) {
-          //   var a = styleNodeChild.parentNode
-          // }
-
         })
       })
     } else /*add styles case*/ {
-      selectedNodes.forEach((selectedNode, index) => {
-        // debugger
+      selectedNodes.forEach((selectedNode, selectedNodeIndex) => {
         if (!filteredSelectedNodes.includes(selectedNode)) {
           console.log("selected node with 0 visually selected chars")
           // case when end of prevLine or start of next line is selected
@@ -285,7 +278,13 @@ export class Editor {
           return
         }
 
-        textNodes.forEach(textNode => {
+        textNodes.forEach((textNode, textNodeIndex) => {
+          if (selectedNodeIndex === filteredSelectedNodes.length - 1 && textNodeIndex === textNodes.length - 1) {
+            const lastVisuallySelectedNode = filteredSelectedNodes[filteredSelectedNodes.length - 1]
+            endContainer = lastVisuallySelectedNode
+            endOffset = lastVisuallySelectedNode.textContent.length
+          }
+
           const textNodeParents = this.getNodeParentsUntil(textNode, this.editorNode)
           const isTextNodeAlreadyWrapped = textNodeParents.some(parentNode => parentNode.tagName.toLowerCase() === tagName)
 
@@ -381,6 +380,15 @@ export class Editor {
         startNode,
         endNode: endNode,
         endOffset: endNode.textContent.length || undefined,
+      })
+    }
+
+    // Normalize on removing styles
+    if (updatedSelectedNodes.length && isSelectionAlreadyWrapped) {
+      updatedSelectedNodes.forEach(updatedNode => {
+        const parent = updatedNode.parentNode
+
+        if (parent) parent.normalize()
       })
     }
   }
