@@ -199,6 +199,8 @@ export class Editor {
     
     let { startContainer, startOffset, endContainer, endOffset, collapsed } = range
     const updatedSelectedNodes = []
+    let updatedStartOffset = undefined
+    let updatedEndOffset = undefined
 
     const isSelectionAlreadyWrapped = selectedNodes.every((selectedNode) => {
       const textNodes = this.getSelectedTextNodes(selectedNode)
@@ -306,6 +308,15 @@ export class Editor {
         if (isAlreadyWrapped) {
           console.log("whole node is already wrapped")
           const textNodes = this.getTextNodes(selectedNode)
+          debugger
+
+          if (selectedNodeIndex === 0) {
+            updatedStartOffset = endOffset
+          }
+
+          if (selectedNodeIndex === selectedNodes.length - 1) {
+            updatedEndOffset = endOffset
+          }
 
           if (textNodes.length) {
             updatedSelectedNodes.push(...textNodes)
@@ -364,7 +375,6 @@ export class Editor {
                 }
 
                 // TODO FIx 3 lines, second line select middle chars at least 2, select part of first line and part of chars from the second line
-                // same for single line, select multiple chars then select some new chars and part of old chars - start from this case
                 // Think maybe selectedNodes should containt selectedText nodes instead of parents. This will allow to get rid of multiple
                 // iterations and problems with deciding what to use selectedNode or textNode
                 if (isLastNode) {
@@ -384,6 +394,14 @@ export class Editor {
             console.log("text node is already wrapped")
             const textNodes = this.getTextNodes(selectedNode)
 
+            if (selectedNodeIndex === 0) {
+              updatedStartOffset = endOffset
+            }
+
+            if (selectedNodeIndex === selectedNodes.length - 1) {
+              updatedEndOffset = endOffset
+            }
+
             if (textNodes.length) {
               updatedSelectedNodes.push(...textNodes)
             } else {
@@ -401,8 +419,9 @@ export class Editor {
 
       Editor.selectRange({
         startNode,
-        endNode: endNode,
-        endOffset: endNode.textContent.length || undefined,
+        startOffset: updatedStartOffset,
+        endNode,
+        endOffset: updatedEndOffset || endNode.textContent.length || undefined,
       })
     }
 
