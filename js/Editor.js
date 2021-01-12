@@ -4,14 +4,22 @@
 // TODO get collapsed case back and make it work
 // TODO highlight buttons
 export class Editor {
+  static getSelection = () => document.getSelection()
+
+  static getRange = () => Editor.getSelection().getRangeAt(0)
+
+  static createRange = () => document.createRange()
+
+  static createTextNode = (text) => document.createTextNode(text)
+
   static selectRange = ({
     startNode,
     startOffset = 0,
     endNode,
     endOffset = 1,
   }) => {
-    const range = document.createRange()
-    const selection = document.getSelection()
+    const range = Editor.createRange()
+    const selection = Editor.getSelection()
 
     selection.removeAllRanges()
     range.setStart(startNode, startOffset)
@@ -19,14 +27,18 @@ export class Editor {
     selection.addRange(range)
   }
 
+  constructor (editorNode) {
+    this.editorNode = editorNode
+  }
+
   getSelectedNodes = () => {
-    var selection = window.getSelection();
+    var selection = Editor.getSelection();
 
     if (selection.isCollapsed || !selection.rangeCount) {
       return { selectedNodes: [], filteredSelectedNodes: [] };
     }
 
-    var range = selection.getRangeAt(0)
+    var range = Editor.getRange()
     var node1 = selection.anchorNode;
     var node2 = selection.focusNode;
     var selectionAncestor = range.commonAncestorContainer;
@@ -146,7 +158,7 @@ export class Editor {
             a = a.concat(recursor(n.childNodes[i]));
       } else
         a.push(n);
-      return a.filter(textNode => document.getSelection().containsNode(textNode));
+      return a.filter(textNode => Editor.getSelection().containsNode(textNode));
     }
     return recursor(node);
   }
@@ -154,11 +166,7 @@ export class Editor {
   getSelectedTextNodes = (node) => {
     const allTextNodes = this.getTextNodes(node)
 
-    return allTextNodes.filter(textNode => document.getSelection().containsNode(textNode))
-  }
-  
-  constructor (editorNode) {
-    this.editorNode = editorNode
+    return allTextNodes.filter(textNode => Editor.getSelection().containsNode(textNode))
   }
 
   getNodeParentsUntil = (node, untilNode) => {
@@ -201,7 +209,7 @@ export class Editor {
 
   handleActionClick = (tagName) => {
     const { selectedTextNodes } = this.getSelectedNodes()
-    const range = document.getSelection().getRangeAt(0)
+    const range = Editor.getRange()
     console.log("selectedTextNodes: ", selectedTextNodes)
 
     if (!range) {
@@ -242,7 +250,7 @@ export class Editor {
           }
 
           if (selectedText) {
-            const textNodeWithoutStyle = document.createTextNode(selectedText)
+            const textNodeWithoutStyle = Editor.createTextNode(selectedText)
             replaceWithNodes.push(textNodeWithoutStyle)
             updatedSelectedNodes.push(textNodeWithoutStyle)
           }
@@ -270,7 +278,7 @@ export class Editor {
               const styleNode = textNodeParents.find(parentNode => parentNode.tagName.toLowerCase() === tagName)
               const notSelectedText = newSelectedTextNode.data.slice(0, startOffset)
               const selectedText = newSelectedTextNode.data.slice(startOffset, newSelectedTextNode.length)
-              const textNodeWithoutStyle = document.createTextNode(selectedText)
+              const textNodeWithoutStyle = Editor.createTextNode(selectedText)
               const tagNode = this.createStyleNode(tagName)
               tagNode.append(notSelectedText)
 
@@ -283,7 +291,7 @@ export class Editor {
               const styleNode = textNodeParents.find(parentNode => parentNode.tagName.toLowerCase() === tagName)
               const selectedText = newSelectedTextNode.data.slice(0, endOffset)
               const notSelectedText = newSelectedTextNode.data.slice(endOffset, newSelectedTextNode.length)
-              const textNodeWithoutStyle = document.createTextNode(selectedText)
+              const textNodeWithoutStyle = Editor.createTextNode(selectedText)
               const tagNode = this.createStyleNode(tagName)
               tagNode.append(notSelectedText)
 
