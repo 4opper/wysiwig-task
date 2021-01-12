@@ -37,43 +37,27 @@ export class Editor {
     const selectedNodes = this.getNodesBetween(selectionAncestor, node1, node2)
 
     // TODO test cases with multiple lines, with and without empty selections on the end
-    // Filters out nodes that doesn't have selected chars and are not empty lines
+    let hasUpdatedStart = false
+    let hasUpdatedEnd = false
+    // Filters out nodes that don't have selected chars
     const filteredSelectedNodes = selectedNodes.filter((selectedNode, index) => {
       if (index === 0) {
-        const result = range.startOffset >= selectedNode.textContent.length && selectedNode.textContent.length !== 0 ? false : true
+        const result = range.startOffset >= selectedNode.textContent.length ? false : true
 
         if (!result) {
-          const startNode = selectedNodes[index + 1]
-          const textNodes = this.getTextNodes(startNode)
-          const startNodeTextNode = textNodes ? textNodes[textNodes.length - 1] : selectedNode
-
           console.log("update start")
-          Editor.selectRange({
-            startNode: startNodeTextNode,
-            endNode: range.endContainer,
-            endOffset: range.endOffset,
-          })
+          hasUpdatedStart = true
         }
 
         return result
       }
 
       if (index === selectedNodes.length - 1) {
-        const possiblyUpdatedRange = selection.getRangeAt(0)
-        const result = range.endOffset <= 0 && selectedNode.textContent.length !== 0 ? false : true
+        const result = range.endOffset <= 0 ? false : true
 
         if (!result) {
-          const endNode = selectedNodes[index - 1]
-          const textNodes = this.getTextNodes(endNode)
-          const endNodeTextNode = textNodes ? textNodes[textNodes.length - 1] : selectedNode
-
           console.log("update end")
-          Editor.selectRange({
-            startNode: possiblyUpdatedRange.startContainer,
-            startOffset: possiblyUpdatedRange.startOffset,
-            endNode: endNodeTextNode,
-            endOffset: endNodeTextNode.textContent.length,
-          })
+          hasUpdatedEnd = true
         }
 
         return result
@@ -88,9 +72,30 @@ export class Editor {
       selectedTextNodes.push(...this.getTextNodes(selectedNode))
     })
 
+    if (hasUpdatedStart && hasUpdatedEnd) {
+      Editor.selectRange({
+        startNode: selectedTextNodes[0],
+        endNode: selectedTextNodes[selectedTextNodes.length - 1],
+        endOffset: selectedTextNodes[selectedTextNodes.length - 1].textContent.length,
+      })
+    } else if (hasUpdatedStart) {
+      Editor.selectRange({
+        startNode: selectedTextNodes[0],
+        endNode: range.endContainer,
+        endOffset: range.endOffset,
+      })
+    } else if (hasUpdatedEnd) {
+      Editor.selectRange({
+        startNode: range.startContainer,
+        startOffset: range.startOffset,
+        endNode: selectedTextNodes[selectedTextNodes.length - 1],
+        endOffset: selectedTextNodes[selectedTextNodes.length - 1].textContent.length,
+      })
+    }
+
     console.log("original selectedNodes: ", selectedNodes)
 
-    return { selectedNodes: filteredSelectedNodes, selectedTextNodes, filteredSelectedNodes: filteredSelectedNodes }
+    return { selectedTextNodes }
   }
 
   isDescendant = (parent, child) => {
@@ -194,7 +199,6 @@ export class Editor {
     return styleNode
   }
 
-  // TODO make divs with br on the end and beginning don't loose selection
   handleActionClick = (tagName) => {
     const { selectedTextNodes } = this.getSelectedNodes()
     const range = document.getSelection().getRangeAt(0)
