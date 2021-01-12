@@ -1,6 +1,7 @@
+// TODO fix bugs
+// TODO test very well
+// TODO refactor
 // TODO get collapsed case back and make it work
-// TODO can try to get rid of filtered and simple selectedNodes to edit selection on selectionChanges
-// (filtered selectedNodes fixes case when end of prev line or start of next line is kinda selected, but no chars are selected on this prev/next line)
 // TODO highlight buttons
 export class Editor {
   static selectRange = ({
@@ -22,7 +23,7 @@ export class Editor {
     var selection = window.getSelection();
 
     if (selection.isCollapsed || !selection.rangeCount) {
-      return [];
+      return { selectedNodes: [], filteredSelectedNodes: [] };
     }
 
     var range = selection.getRangeAt(0)
@@ -30,25 +31,60 @@ export class Editor {
     var node2 = selection.focusNode;
     var selectionAncestor = range.commonAncestorContainer;
     if (selectionAncestor == null) {
-      return [];
+      return { selectedNodes: [], filteredSelectedNodes: [] };
     }
 
     const selectedNodes = this.getNodesBetween(selectionAncestor, node1, node2)
 
-    // Filters out nodes that doesn't have selected chars
+    // TODO test cases with multiple lines, with and without empty selections on the end
+    // Filters out nodes that doesn't have selected chars and are not empty lines
     const filteredSelectedNodes = selectedNodes.filter((selectedNode, index) => {
       if (index === 0) {
-        return range.startOffset < selectedNode.textContent.length
+        const result = range.startOffset >= selectedNode.textContent.length && selectedNode.textContent.length !== 0 ? false : true
+
+        if (!result) {
+          const startNode = selectedNodes[index + 1]
+          const textNodes = this.getTextNodes(startNode)
+          const startNodeTextNode = textNodes ? textNodes[textNodes.length - 1] : selectedNode
+
+          console.log("update start")
+          Editor.selectRange({
+            startNode: startNodeTextNode,
+            endNode: range.endContainer,
+            endOffset: range.endOffset,
+          })
+        }
+
+        return result
       }
 
       if (index === selectedNodes.length - 1) {
-        return range.endOffset > 0
+        const possiblyUpdatedRange = selection.getRangeAt(0)
+        const result = range.endOffset <= 0 && selectedNode.textContent.length !== 0 ? false : true
+
+        if (!result) {
+          const endNode = selectedNodes[index - 1]
+          const textNodes = this.getTextNodes(endNode)
+          const endNodeTextNode = textNodes ? textNodes[textNodes.length - 1] : selectedNode
+
+          console.log("update end")
+          Editor.selectRange({
+            startNode: possiblyUpdatedRange.startContainer,
+            startOffset: possiblyUpdatedRange.startOffset,
+            endNode: endNodeTextNode,
+            endOffset: endNodeTextNode.textContent.length,
+          })
+        }
+
+        return result
       }
 
       return true
     })
 
-    return { selectedNodes, filteredSelectedNodes, range }
+    console.log("original selectedNodes: ", selectedNodes)
+
+    return { selectedNodes: filteredSelectedNodes, filteredSelectedNodes: filteredSelectedNodes }
   }
 
   isDescendant = (parent, child) => {
@@ -153,7 +189,8 @@ export class Editor {
   }
 
   handleActionClick = (tagName) => {
-    const { selectedNodes, filteredSelectedNodes, range } = this.getSelectedNodes()
+    const { selectedNodes, filteredSelectedNodes } = this.getSelectedNodes()
+    const range = document.getSelection().getRangeAt(0)
     console.log("selectedNodes: ", selectedNodes)
     if (!range) {
       console.log("not focused or nothing is selected")
@@ -163,7 +200,7 @@ export class Editor {
     let { startContainer, startOffset, endContainer, endOffset, collapsed } = range
     const updatedSelectedNodes = []
 
-    const isSelectionAlreadyWrapped = filteredSelectedNodes.every((selectedNode) => {
+    const isSelectionAlreadyWrapped = selectedNodes.every((selectedNode) => {
       const textNodes = this.getSelectedTextNodes(selectedNode)
 
       const isAlreadyWrapped = textNodes.every(textNode => {
@@ -178,18 +215,6 @@ export class Editor {
     if (isSelectionAlreadyWrapped) /*remove styles case*/ {
       console.log("already wrapped")
       selectedNodes.forEach((selectedNode) => {
-        if (!filteredSelectedNodes.includes(selectedNode)) {
-          console.log("selected node with 0 visually selected chars")
-          // case when end of prevLine or start of next line is selected
-          if (selectedNode.textContent.length !== 0) {
-            return
-          }
-
-          // Empty line case
-          updatedSelectedNodes.push(selectedNode)
-          return
-        }
-
         const textNodes = this.getSelectedTextNodes(selectedNode)
         
         if (!textNodes.length) {
@@ -198,7 +223,7 @@ export class Editor {
         }
 
         textNodes.forEach((textNode, index) => {
-          if (startContainer === endContainer) {
+          if (selectedNodes.length === 1) {
             console.log("single text node")
             const textNodeParents = this.getNodeParentsUntil(textNode, this.editorNode)
             const styleNode = textNodeParents.find(parentNode => parentNode.tagName.toLowerCase() === tagName)
@@ -227,8 +252,8 @@ export class Editor {
 
             styleNode.replaceWith(...replaceWithNodes)
           } else {
-            const isFirstNode = selectedNode === filteredSelectedNodes[0]
-            const isLastNode = selectedNode === filteredSelectedNodes[filteredSelectedNodes.length - 1]
+            const isFirstNode = selectedNode === selectedNodes[0]
+            const isLastNode = selectedNode === selectedNodes[selectedNodes.length - 1]
 
             if ((isFirstNode && startOffset === 0) || (isLastNode && endOffset === endContainer.length) || (!isFirstNode && !isLastNode))  {
               console.log("one of multiple nodes is fully selected")
@@ -269,19 +294,8 @@ export class Editor {
         })
       })
     } else /*add styles case*/ {
+      // TODO recheck if we use selectedNodes inside textNodes loop. Probably should use textNodes
       selectedNodes.forEach((selectedNode, selectedNodeIndex) => {
-        if (!filteredSelectedNodes.includes(selectedNode)) {
-          console.log("selected node with 0 visually selected chars")
-          // case when end of prev line or start of next line is selected
-          if (selectedNode.textContent.length !== 0) {
-            return
-          }
-
-          // Empty line case
-          updatedSelectedNodes.push(selectedNode)
-          return
-        }
-        
         const textNodes = this.getSelectedTextNodes(selectedNode)
         const isAlreadyWrapped = textNodes.every(textNode => {
           const textNodeParents = this.getNodeParentsUntil(textNode, this.editorNode)
@@ -303,20 +317,11 @@ export class Editor {
         }
 
         textNodes.forEach((textNode, textNodeIndex) => {
-          if (selectedNodeIndex === filteredSelectedNodes.length - 1 && textNodeIndex === textNodes.length - 1) {
-            const lastVisuallySelectedNode = filteredSelectedNodes[filteredSelectedNodes.length - 1]
-
-            if (endContainer !== lastVisuallySelectedNode) {
-              endContainer = lastVisuallySelectedNode
-              endOffset = lastVisuallySelectedNode.textContent.length
-            }
-          }
-
           const textNodeParents = this.getNodeParentsUntil(textNode, this.editorNode)
           const isTextNodeAlreadyWrapped = textNodeParents.some(parentNode => parentNode.tagName.toLowerCase() === tagName)
 
           if (!isTextNodeAlreadyWrapped) {
-            if (startContainer === endContainer) /*Single selectedNode selected or has caret*/ {
+            if (selectedNodes.length === 1 && textNodes.length === 1) /*Single selectedNode selected or has caret*/ {
               console.log("single selectedNode")
               if (!collapsed) /*Any part of selectedNode is selected*/  {
                 console.log("inner part of word or whole word")
@@ -335,8 +340,8 @@ export class Editor {
                 updatedSelectedNodes.push(italicNode.firstChild)
               }
             } else /*Multiple selectedNode selected or has caret*/ {
-              const isFirstNode = selectedNode === filteredSelectedNodes[0]
-              const isLastNode = selectedNode === filteredSelectedNodes[filteredSelectedNodes.length - 1]
+              const isFirstNode = selectedNode === selectedNodes[0]
+              const isLastNode = selectedNode === selectedNodes[selectedNodes.length - 1]
 
               if ((isFirstNode && startOffset === 0) || (isLastNode && endOffset === endContainer.length) || (!isFirstNode && !isLastNode))  {
                 console.log("one of multiple nodes is fully selected")
@@ -358,6 +363,10 @@ export class Editor {
                   updatedSelectedNodes.push(italicNode.firstChild)
                 }
 
+                // TODO FIx 3 lines, second line select middle chars at least 2, select part of first line and part of chars from the second line
+                // same for single line, select multiple chars then select some new chars and part of old chars - start from this case
+                // Think maybe selectedNodes should containt selectedText nodes instead of parents. This will allow to get rid of multiple
+                // iterations and problems with deciding what to use selectedNode or textNode
                 if (isLastNode) {
                   console.log("last of multiple nodes is not fully selected")
                   const italicNode = this.createStyleNode(tagName)
