@@ -1,4 +1,3 @@
-// TODO fix bugs
 // TODO test very well
 // TODO refactor
 // TODO get collapsed case back and make it work
@@ -29,182 +28,6 @@ export class Editor {
 
   constructor (editorNode) {
     this.editorNode = editorNode
-  }
-
-  getSelectedNodes = () => {
-    var selection = Editor.getSelection();
-
-    if (selection.isCollapsed || !selection.rangeCount) {
-      return { selectedNodes: [], filteredSelectedNodes: [] };
-    }
-
-    var range = Editor.getRange()
-    var node1 = selection.anchorNode;
-    var node2 = selection.focusNode;
-    var selectionAncestor = range.commonAncestorContainer;
-    if (selectionAncestor == null) {
-      return { selectedNodes: [], filteredSelectedNodes: [] };
-    }
-
-    const selectedNodes = this.getNodesBetween(selectionAncestor, node1, node2)
-
-    // TODO test cases with multiple lines, with and without empty selections on the end
-    let hasUpdatedStart = false
-    let hasUpdatedEnd = false
-    // Filters out nodes that don't have selected chars
-    const filteredSelectedNodes = selectedNodes.filter((selectedNode, index) => {
-      if (index === 0) {
-        const result = range.startOffset >= selectedNode.textContent.length ? false : true
-
-        if (!result) {
-          console.log("update start")
-          hasUpdatedStart = true
-        }
-
-        return result
-      }
-
-      if (index === selectedNodes.length - 1) {
-        const result = range.endOffset <= 0 ? false : true
-
-        if (!result) {
-          console.log("update end")
-          hasUpdatedEnd = true
-        }
-
-        return result
-      }
-
-      return true
-    })
-    // TODO make it in single iteration
-    const selectedTextNodes = []
-
-    filteredSelectedNodes.forEach(selectedNode => {
-      selectedTextNodes.push(...this.getTextNodes(selectedNode))
-    })
-
-    if (hasUpdatedStart && hasUpdatedEnd) {
-      Editor.selectRange({
-        startNode: selectedTextNodes[0],
-        endNode: selectedTextNodes[selectedTextNodes.length - 1],
-        endOffset: selectedTextNodes[selectedTextNodes.length - 1].textContent.length,
-      })
-    } else if (hasUpdatedStart) {
-      Editor.selectRange({
-        startNode: selectedTextNodes[0],
-        endNode: range.endContainer,
-        endOffset: range.endOffset,
-      })
-    } else if (hasUpdatedEnd) {
-      Editor.selectRange({
-        startNode: range.startContainer,
-        startOffset: range.startOffset,
-        endNode: selectedTextNodes[selectedTextNodes.length - 1],
-        endOffset: selectedTextNodes[selectedTextNodes.length - 1].textContent.length,
-      })
-    }
-
-    console.log("original selectedNodes: ", selectedNodes)
-
-    return { selectedTextNodes }
-  }
-
-  isDescendant = (parent, child) => {
-    var node = child;
-    while (node != null) {
-      if (node == parent) {
-        return true;
-      }
-      node = node.parentNode;
-    }
-    return false;
-  }
-
-  getNodesBetween = (rootNode, node1, node2) => {
-    var resultNodes = [];
-    var isBetweenNodes = false;
-    for (var i = 0; i < rootNode.childNodes.length; i+= 1) {
-      if (this.isDescendant(rootNode.childNodes[i], node1) || this.isDescendant(rootNode.childNodes[i], node2)) {
-        if (resultNodes.length == 0) {
-          isBetweenNodes = true;
-        } else {
-          isBetweenNodes = false;
-        }
-        resultNodes.push(rootNode.childNodes[i]);
-      } else if (resultNodes.length == 0) {
-      } else if (isBetweenNodes) {
-        resultNodes.push(rootNode.childNodes[i]);
-      } else {
-        return resultNodes;
-      }
-    };
-    if (resultNodes.length == 0) {
-      return [rootNode];
-    } else if (this.isDescendant(resultNodes[resultNodes.length - 1], node1) || this.isDescendant(resultNodes[resultNodes.length - 1], node2)) {
-      return resultNodes;
-    } else {
-      // same child node for both should never happen
-      return [resultNodes[0]];
-    }
-  }
-
-  getTextNodes = (node) => {
-    function recursor(n) {
-      var i, a = [];
-      if (n.nodeType !== 3) {
-        if (n.childNodes)
-          for (i = 0; i < n.childNodes.length; ++i)
-            a = a.concat(recursor(n.childNodes[i]));
-      } else
-        a.push(n);
-      return a.filter(textNode => Editor.getSelection().containsNode(textNode));
-    }
-    return recursor(node);
-  }
-
-  getSelectedTextNodes = (node) => {
-    const allTextNodes = this.getTextNodes(node)
-
-    return allTextNodes.filter(textNode => Editor.getSelection().containsNode(textNode))
-  }
-
-  getNodeParentsUntil = (node, untilNode) => {
-    const parentNodes = []
-    let currentNode = node
-
-    while (currentNode !== untilNode) {
-      const parent = currentNode.parentNode
-      parentNodes.push(parent)
-      currentNode = parent
-    }
-
-    return parentNodes
-  }
-
-  addStylesForHeading = (node, tagName) => {
-    const DEFAULT_FONT_SIZE = 16
-    node.style.fontWeight = 'bold'
-
-
-    if (tagName === 'h1') {
-      node.style.fontSize = `${DEFAULT_FONT_SIZE * 2}px`
-    }
-
-    if (tagName === 'h2') {
-      node.style.fontSize = `${DEFAULT_FONT_SIZE * 1.5}px`
-    }
-  }
-
-  createStyleNode = (tagName) => {
-    if (tagName !== 'h1' && tagName !== 'h2') {
-      return document.createElement(tagName)
-    }
-
-    const styleNode = document.createElement('span')
-    this.addStylesForHeading(styleNode, tagName)
-
-    return styleNode
   }
 
   handleActionClick = (tagName) => {
@@ -308,8 +131,6 @@ export class Editor {
 
         if (isAlreadyWrapped) {
           console.log("whole node is already wrapped")
-          // const textNodes = this.getTextNodes(selectedNode)
-
           if (selectedNodeIndex === 0) {
             updatedStartOffset = endOffset
           }
@@ -319,12 +140,6 @@ export class Editor {
           }
 
           updatedSelectedNodes.push(newSelectedTextNode)
-
-          // if (textNodes.length) {
-          //   updatedSelectedNodes.push(...textNodes)
-          // } else {
-          //   updatedSelectedNodes.push(selectedNode)
-          // }
 
           return
         }
@@ -414,4 +229,174 @@ export class Editor {
   handleH1Click = () => this.handleActionClick('h1')
 
   handleH2Click = () => this.handleActionClick('h2')
+
+  getSelectedNodes = () => {
+    var selection = Editor.getSelection();
+
+    if (selection.isCollapsed || !selection.rangeCount) {
+      return { selectedNodes: [], filteredSelectedNodes: [] };
+    }
+
+    var range = Editor.getRange()
+    var node1 = selection.anchorNode;
+    var node2 = selection.focusNode;
+    var selectionAncestor = range.commonAncestorContainer;
+    if (selectionAncestor == null) {
+      return { selectedNodes: [], filteredSelectedNodes: [] };
+    }
+
+    const selectedNodes = this.getNodesBetween(selectionAncestor, node1, node2)
+
+    // TODO test cases with multiple lines, with and without empty selections on the end
+    let hasUpdatedStart = false
+    let hasUpdatedEnd = false
+    // Filters out nodes that don't have selected chars
+    const filteredSelectedNodes = selectedNodes.filter((selectedNode, index) => {
+      if (index === 0) {
+        const result = range.startOffset >= selectedNode.textContent.length ? false : true
+
+        if (!result) {
+          console.log("update start")
+          hasUpdatedStart = true
+        }
+
+        return result
+      }
+
+      if (index === selectedNodes.length - 1) {
+        const result = range.endOffset <= 0 ? false : true
+
+        if (!result) {
+          console.log("update end")
+          hasUpdatedEnd = true
+        }
+
+        return result
+      }
+
+      return true
+    })
+    // TODO make it in single iteration
+    const selectedTextNodes = []
+
+    filteredSelectedNodes.forEach(selectedNode => {
+      selectedTextNodes.push(...this.getTextNodes(selectedNode))
+    })
+
+    if (hasUpdatedStart && hasUpdatedEnd) {
+      Editor.selectRange({
+        startNode: selectedTextNodes[0],
+        endNode: selectedTextNodes[selectedTextNodes.length - 1],
+        endOffset: selectedTextNodes[selectedTextNodes.length - 1].textContent.length,
+      })
+    } else if (hasUpdatedStart) {
+      Editor.selectRange({
+        startNode: selectedTextNodes[0],
+        endNode: range.endContainer,
+        endOffset: range.endOffset,
+      })
+    } else if (hasUpdatedEnd) {
+      Editor.selectRange({
+        startNode: range.startContainer,
+        startOffset: range.startOffset,
+        endNode: selectedTextNodes[selectedTextNodes.length - 1],
+        endOffset: selectedTextNodes[selectedTextNodes.length - 1].textContent.length,
+      })
+    }
+
+    console.log("original selectedNodes: ", selectedNodes)
+
+    return { selectedTextNodes }
+  }
+
+  getNodesBetween = (rootNode, node1, node2) => {
+    var resultNodes = [];
+    var isBetweenNodes = false;
+    for (var i = 0; i < rootNode.childNodes.length; i+= 1) {
+      if (this.isDescendant(rootNode.childNodes[i], node1) || this.isDescendant(rootNode.childNodes[i], node2)) {
+        if (resultNodes.length == 0) {
+          isBetweenNodes = true;
+        } else {
+          isBetweenNodes = false;
+        }
+        resultNodes.push(rootNode.childNodes[i]);
+      } else if (resultNodes.length == 0) {
+      } else if (isBetweenNodes) {
+        resultNodes.push(rootNode.childNodes[i]);
+      } else {
+        return resultNodes;
+      }
+    };
+    if (resultNodes.length == 0) {
+      return [rootNode];
+    } else if (this.isDescendant(resultNodes[resultNodes.length - 1], node1) || this.isDescendant(resultNodes[resultNodes.length - 1], node2)) {
+      return resultNodes;
+    } else {
+      // same child node for both should never happen
+      return [resultNodes[0]];
+    }
+  }
+
+  isDescendant = (parent, child) => {
+    var node = child;
+    while (node != null) {
+      if (node == parent) {
+        return true;
+      }
+      node = node.parentNode;
+    }
+    return false;
+  }
+
+  getNodeParentsUntil = (node, untilNode) => {
+    const parentNodes = []
+    let currentNode = node
+
+    while (currentNode !== untilNode) {
+      const parent = currentNode.parentNode
+      parentNodes.push(parent)
+      currentNode = parent
+    }
+
+    return parentNodes
+  }
+
+  getTextNodes = (node) => {
+    function recursor(n) {
+      var i, a = [];
+      if (n.nodeType !== 3) {
+        if (n.childNodes)
+          for (i = 0; i < n.childNodes.length; ++i)
+            a = a.concat(recursor(n.childNodes[i]));
+      } else
+        a.push(n);
+      return a.filter(textNode => Editor.getSelection().containsNode(textNode));
+    }
+    return recursor(node);
+  }
+
+  createStyleNode = (tagName) => {
+    if (tagName !== 'h1' && tagName !== 'h2') {
+      return document.createElement(tagName)
+    }
+
+    const styleNode = document.createElement('span')
+    this.addStylesForHeading(styleNode, tagName)
+
+    return styleNode
+  }
+
+  addStylesForHeading = (node, tagName) => {
+    const DEFAULT_FONT_SIZE = 16
+    node.style.fontWeight = 'bold'
+
+
+    if (tagName === 'h1') {
+      node.style.fontSize = `${DEFAULT_FONT_SIZE * 2}px`
+    }
+
+    if (tagName === 'h2') {
+      node.style.fontSize = `${DEFAULT_FONT_SIZE * 1.5}px`
+    }
+  }
 }
