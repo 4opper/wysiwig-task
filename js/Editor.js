@@ -1,8 +1,9 @@
-// TODO test very well
 // TODO refactor
-// TODO get collapsed case back and make it work
-// TODO highlight buttons
+// TODO test very well
+// TODO test in different browsers
 export class Editor {
+  static DEFAULT_FONT_SIZE = 16
+
   static getSelection = () => document.getSelection()
 
   static getRange = () => Editor.getSelection().getRangeAt(0)
@@ -50,8 +51,6 @@ export class Editor {
 
       return textNodeParents.some(parentNode => parentNode.tagName.toLowerCase() === tagName)
     })
-
-    debugger
 
     if (isSelectionAlreadyWrapped) /*remove styles case*/ {
       console.log("already wrapped")
@@ -231,18 +230,21 @@ export class Editor {
   handleH2Click = () => this.handleActionClick('h2')
 
   getSelectedNodes = () => {
-    var selection = Editor.getSelection();
+    const selection = Editor.getSelection();
 
     if (selection.isCollapsed || !selection.rangeCount) {
-      return { selectedNodes: [], filteredSelectedNodes: [] };
+      return { selectedTextNodes: [] }
     }
 
-    var range = Editor.getRange()
-    var node1 = selection.anchorNode;
-    var node2 = selection.focusNode;
-    var selectionAncestor = range.commonAncestorContainer;
+    const range = Editor.getRange()
+    const node1 = selection.anchorNode
+    const node2 = selection.focusNode
+    const selectionAncestor = range.commonAncestorContainer
+
+    debugger
+
     if (selectionAncestor == null) {
-      return { selectedNodes: [], filteredSelectedNodes: [] };
+      return { selectedTextNodes: [] }
     }
 
     const selectedNodes = this.getNodesBetween(selectionAncestor, node1, node2)
@@ -338,14 +340,7 @@ export class Editor {
   }
 
   isDescendant = (parent, child) => {
-    var node = child;
-    while (node != null) {
-      if (node == parent) {
-        return true;
-      }
-      node = node.parentNode;
-    }
-    return false;
+    return parent.contains(child)
   }
 
   getNodeParentsUntil = (node, untilNode) => {
@@ -362,17 +357,22 @@ export class Editor {
   }
 
   getTextNodes = (node) => {
-    function recursor(n) {
-      var i, a = [];
-      if (n.nodeType !== 3) {
-        if (n.childNodes)
-          for (i = 0; i < n.childNodes.length; ++i)
-            a = a.concat(recursor(n.childNodes[i]));
-      } else
-        a.push(n);
-      return a.filter(textNode => Editor.getSelection().containsNode(textNode));
+    const recursor = (node) => {
+      let textNodes = []
+      if (node.nodeType !== 3) {
+        if (node.childNodes) {
+          for (let i = 0; i < node.childNodes.length; i++) {
+            textNodes = [...textNodes, ...recursor(node.childNodes[i])]
+          }
+        }
+      } else {
+        textNodes.push(node)
+      }
+
+      return textNodes
     }
-    return recursor(node);
+
+    return recursor(node)
   }
 
   createStyleNode = (tagName) => {
@@ -387,16 +387,12 @@ export class Editor {
   }
 
   addStylesForHeading = (node, tagName) => {
-    const DEFAULT_FONT_SIZE = 16
     node.style.fontWeight = 'bold'
 
-
     if (tagName === 'h1') {
-      node.style.fontSize = `${DEFAULT_FONT_SIZE * 2}px`
-    }
-
-    if (tagName === 'h2') {
-      node.style.fontSize = `${DEFAULT_FONT_SIZE * 1.5}px`
+      node.style.fontSize = `${Editor.DEFAULT_FONT_SIZE * 2}px`
+    } else if (tagName === 'h2') {
+      node.style.fontSize = `${Editor.DEFAULT_FONT_SIZE * 1.5}px`
     }
   }
 }
