@@ -66,11 +66,11 @@ export class Editor {
     let updatedStartOffset = undefined
     let updatedEndOffset = undefined
 
-    selectedTextNodes.forEach((newSelectedTextNode, selectedNodeIndex) => {
+    selectedTextNodes.forEach((selectedTextNode, selectedNodeIndex) => {
       if (!isSelectionAlreadyWrapped) {
         const isAlreadyWrapped = Boolean(
           this.getParentNodeWithTag({
-            node: newSelectedTextNode,
+            node: selectedTextNode,
             tagName,
             rootNode: this.editorNode,
           })
@@ -87,7 +87,7 @@ export class Editor {
             updatedEndOffset = endOffset
           }
 
-          updatedSelectedNodes.push(newSelectedTextNode)
+          updatedSelectedNodes.push(selectedTextNode)
 
           return
         }
@@ -97,7 +97,7 @@ export class Editor {
         this.handleSingleTextNodeSelected({
           isSelectionAlreadyWrapped,
           range,
-          newSelectedTextNode,
+          selectedTextNode,
           updatedSelectedNodes,
           tagName,
         })
@@ -105,7 +105,7 @@ export class Editor {
         this.handleMultipleTextNodesSelected({
           isSelectionAlreadyWrapped,
           range,
-          newSelectedTextNode,
+          selectedTextNode,
           updatedSelectedNodes,
           tagName,
           selectedTextNodes,
@@ -127,29 +127,27 @@ export class Editor {
     }
   }
 
+  // TODO fix h1 -> h2 -> remove h1 = loose all styles
   handleSingleTextNodeSelected = ({
     isSelectionAlreadyWrapped,
     updatedSelectedNodes,
-    newSelectedTextNode,
+    selectedTextNode,
     range,
     tagName,
   }) => {
     if (this.isDev) console.log("single text node")
 
     const styleNode = this.getParentNodeWithTag({
-      node: newSelectedTextNode,
+      node: selectedTextNode,
       tagName,
       rootNode: this.editorNode,
     })
     const replaceWithNodes = []
     const selectedText = range.toString()
-    const textBeforeSelected = newSelectedTextNode.data.slice(
-      0,
-      range.startOffset
-    )
-    const textAfterSelected = newSelectedTextNode.data.slice(
+    const textBeforeSelected = selectedTextNode.data.slice(0, range.startOffset)
+    const textAfterSelected = selectedTextNode.data.slice(
       range.endOffset,
-      newSelectedTextNode.length
+      selectedTextNode.length
     )
 
     if (isSelectionAlreadyWrapped) {
@@ -180,7 +178,7 @@ export class Editor {
       if (textAfterSelected) replaceWithNodes.push(textAfterSelected)
 
       wrapperNode.append(selectedText)
-      newSelectedTextNode.replaceWith(...replaceWithNodes)
+      selectedTextNode.replaceWith(...replaceWithNodes)
       updatedSelectedNodes.push(wrapperNode.firstChild)
     }
   }
@@ -188,99 +186,69 @@ export class Editor {
   handleMultipleTextNodesSelected = ({
     isSelectionAlreadyWrapped,
     updatedSelectedNodes,
-    newSelectedTextNode,
+    selectedTextNode,
     range,
     tagName,
     selectedTextNodes,
   }) => {
-    const { startOffset, endOffset, endContainer } = range
-    const isFirstNode = newSelectedTextNode === selectedTextNodes[0]
-    const isLastNode =
-      newSelectedTextNode === selectedTextNodes[selectedTextNodes.length - 1]
+    if (isSelectionAlreadyWrapped) {
+      const styleNode = this.getParentNodeWithTag({
+        node: selectedTextNode,
+        tagName,
+        rootNode: this.editorNode,
+      })
 
-    if (
-      (isFirstNode && startOffset === 0) ||
-      (isLastNode && endOffset === endContainer.length) ||
-      (!isFirstNode && !isLastNode)
-    ) {
-      if (this.isDev) console.log("one of multiple nodes is fully selected")
+      styleNode.replaceWith(styleNode.firstChild)
+      updatedSelectedNodes.push(selectedTextNode)
+    } else {
+      const { startOffset, endOffset, endContainer } = range
+      const isFirstNode = selectedTextNode === selectedTextNodes[0]
+      const isLastNode =
+        selectedTextNode === selectedTextNodes[selectedTextNodes.length - 1]
 
-      if (isSelectionAlreadyWrapped) {
-        const styleNode = this.getParentNodeWithTag({
-          node: newSelectedTextNode,
-          tagName,
-          rootNode: this.editorNode,
-        })
+      if (
+        (isFirstNode && startOffset === 0) ||
+        (isLastNode && endOffset === endContainer.length) ||
+        (!isFirstNode && !isLastNode)
+      ) {
+        if (this.isDev) console.log("one of multiple nodes is fully selected")
 
-        styleNode.replaceWith(styleNode.firstChild)
-        updatedSelectedNodes.push(newSelectedTextNode)
-      } else {
         const wrapperNode = this.createStyleNode(tagName)
-        const clonedNode = newSelectedTextNode.cloneNode()
+        const clonedNode = selectedTextNode.cloneNode()
 
         wrapperNode.append(clonedNode)
-        newSelectedTextNode.replaceWith(wrapperNode)
+        selectedTextNode.replaceWith(wrapperNode)
         updatedSelectedNodes.push(wrapperNode.firstChild)
-      }
-    } else {
-      if (isFirstNode) {
-        if (this.isDev)
-          console.log("first of multiple nodes is not fully selected")
+      } else {
+        if (isFirstNode) {
+          if (this.isDev)
+            console.log("first of multiple nodes is not fully selected")
 
-        const notSelectedText = newSelectedTextNode.data.slice(0, startOffset)
-        const selectedText = newSelectedTextNode.data.slice(
-          startOffset,
-          newSelectedTextNode.length
-        )
-
-        if (isSelectionAlreadyWrapped) {
-          const styleNode = this.getParentNodeWithTag({
-            node: newSelectedTextNode,
-            tagName,
-            rootNode: this.editorNode,
-          })
-          const textNodeWithoutStyle = createTextNode(selectedText)
-          const tagNode = this.createStyleNode(tagName)
-
-          tagNode.append(notSelectedText)
-          styleNode.replaceWith(tagNode, textNodeWithoutStyle)
-          updatedSelectedNodes.push(textNodeWithoutStyle)
-        } else {
+          const notSelectedText = selectedTextNode.data.slice(0, startOffset)
+          const selectedText = selectedTextNode.data.slice(
+            startOffset,
+            selectedTextNode.length
+          )
           const wrapperNode = this.createStyleNode(tagName)
 
           wrapperNode.append(selectedText)
-          newSelectedTextNode.replaceWith(notSelectedText, wrapperNode)
+          selectedTextNode.replaceWith(notSelectedText, wrapperNode)
           updatedSelectedNodes.push(wrapperNode.firstChild)
         }
-      }
 
-      if (isLastNode) {
-        if (this.isDev)
-          console.log("last of multiple nodes is not fully selected")
+        if (isLastNode) {
+          if (this.isDev)
+            console.log("last of multiple nodes is not fully selected")
 
-        const selectedText = newSelectedTextNode.data.slice(0, endOffset)
-        const notSelectedText = newSelectedTextNode.data.slice(
-          endOffset,
-          newSelectedTextNode.length
-        )
-
-        if (isSelectionAlreadyWrapped) {
-          const styleNode = this.getParentNodeWithTag({
-            node: newSelectedTextNode,
-            tagName,
-            rootNode: this.editorNode,
-          })
-          const textNodeWithoutStyle = createTextNode(selectedText)
-          const tagNode = this.createStyleNode(tagName)
-
-          tagNode.append(notSelectedText)
-          styleNode.replaceWith(textNodeWithoutStyle, tagNode)
-          updatedSelectedNodes.push(textNodeWithoutStyle)
-        } else {
+          const selectedText = selectedTextNode.data.slice(0, endOffset)
+          const notSelectedText = selectedTextNode.data.slice(
+            endOffset,
+            selectedTextNode.length
+          )
           const wrapperNode = this.createStyleNode(tagName)
 
           wrapperNode.append(selectedText)
-          newSelectedTextNode.replaceWith(wrapperNode, notSelectedText)
+          selectedTextNode.replaceWith(wrapperNode, notSelectedText)
           updatedSelectedNodes.push(wrapperNode.firstChild)
         }
       }
@@ -443,15 +411,17 @@ export class Editor {
   getParentNodeWithTag = ({ node, tagName, rootNode }) => {
     return getParentNodeWithTag({
       node,
-      tagName: tagName === 'H1' || tagName === 'H2' ? 'SPAN' : tagName,
+      tagName: tagName === "H1" || tagName === "H2" ? "SPAN" : tagName,
       rootNode,
-      additionalChecks: [(parentNode) => {
-        if (tagName === 'H1' || tagName === 'H2') {
-          return parentNode.dataset.tag === tagName
-        }
+      additionalChecks: [
+        (parentNode) => {
+          if (tagName === "H1" || tagName === "H2") {
+            return parentNode.dataset.tag === tagName
+          }
 
-        return true
-      }],
+          return true
+        },
+      ],
     })
   }
 
@@ -461,7 +431,7 @@ export class Editor {
     }
 
     const styleNode = document.createElement("SPAN")
-    styleNode.setAttribute('data-tag', tagName)
+    styleNode.setAttribute("data-tag", tagName)
 
     this.addStylesForHeading(styleNode, tagName)
 

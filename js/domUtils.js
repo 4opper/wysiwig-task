@@ -23,10 +23,19 @@ export function getNodesBetween(rootNode, node1, node2) {
   return resultNodes
 }
 
-export function getParentNodeWithTag({ node, tagName, rootNode, additionalChecks = [] }) {
+export function getParentNodeWithTag({
+  node,
+  tagName,
+  rootNode,
+  additionalChecks = [],
+}) {
   const nodeParents = getNodeParentsUntil(node, rootNode)
 
-  return nodeParents.find((parentNode) => parentNode.tagName === tagName && additionalChecks.every(additionalCheck => additionalCheck(parentNode)))
+  return nodeParents.find(
+    (parentNode) =>
+      parentNode.tagName === tagName &&
+      additionalChecks.every((additionalCheck) => additionalCheck(parentNode))
+  )
 }
 
 export function getTextNodes(node) {
