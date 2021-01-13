@@ -1,8 +1,9 @@
 // TODO refactor
 // TODO test very well
 // TODO test in different browsers
-// TODO move dom things into separate file
 // TODO mb move selection + range thinks to separate file also
+import { getNodeParentsUntil, getNodesBetween, getTextNodes } from './domUtils'
+
 export class Editor {
   static DEFAULT_FONT_SIZE = 16
 
@@ -63,7 +64,7 @@ export class Editor {
     let updatedEndOffset = undefined
 
     const isSelectionAlreadyWrapped = selectedTextNodes.every((textNode) => {
-      const textNodeParents = this.getNodeParentsUntil(
+      const textNodeParents = getNodeParentsUntil(
         textNode,
         this.editorNode
       )
@@ -79,7 +80,7 @@ export class Editor {
       selectedTextNodes.forEach((newSelectedTextNode) => {
         if (selectedTextNodes.length === 1) {
           console.log("single text node")
-          const textNodeParents = this.getNodeParentsUntil(
+          const textNodeParents = getNodeParentsUntil(
             newSelectedTextNode,
             this.editorNode
           )
@@ -128,7 +129,7 @@ export class Editor {
             (!isFirstNode && !isLastNode)
           ) {
             console.log("one of multiple nodes is fully selected")
-            const textNodeParents = this.getNodeParentsUntil(
+            const textNodeParents = getNodeParentsUntil(
               newSelectedTextNode,
               this.editorNode
             )
@@ -139,7 +140,7 @@ export class Editor {
             updatedSelectedNodes.push(newSelectedTextNode)
           } else {
             if (isFirstNode) {
-              const textNodeParents = this.getNodeParentsUntil(
+              const textNodeParents = getNodeParentsUntil(
                 newSelectedTextNode,
                 this.editorNode
               )
@@ -163,7 +164,7 @@ export class Editor {
             }
 
             if (isLastNode) {
-              const textNodeParents = this.getNodeParentsUntil(
+              const textNodeParents = getNodeParentsUntil(
                 newSelectedTextNode,
                 this.editorNode
               )
@@ -187,7 +188,7 @@ export class Editor {
       })
     } /*add styles case*/ else {
       selectedTextNodes.forEach((newSelectedTextNode, selectedNodeIndex) => {
-        const textNodeParents = this.getNodeParentsUntil(
+        const textNodeParents = getNodeParentsUntil(
           newSelectedTextNode,
           this.editorNode
         )
@@ -326,7 +327,7 @@ export class Editor {
       return { selectedTextNodes: [] }
     }
 
-    const selectedNodes = this.getNodesBetween(selectionAncestor, node1, node2)
+    const selectedNodes = getNodesBetween(selectionAncestor, node1, node2)
     const {
       normalizedSelectedNodes,
       shouldNormalizeSelectionStart,
@@ -422,77 +423,16 @@ export class Editor {
     }
   }
 
-  getNodesBetween = (rootNode, node1, node2) => {
-    let resultNodes = []
-    let isBetweenNodes = false
-
-    if (rootNode.isSameNode(node1) && node1.isSameNode(node2)) {
-      return [rootNode]
-    }
-
-    for (let i = 0; i < rootNode.childNodes.length; i++) {
-      const currentChild = rootNode.childNodes[i]
-
-      if (
-        this.isDescendant(currentChild, node1) ||
-        this.isDescendant(currentChild, node2)
-      ) {
-        isBetweenNodes = resultNodes.length === 0
-        resultNodes.push(currentChild)
-      } else if (isBetweenNodes) {
-        resultNodes.push(currentChild)
-      }
-    }
-
-    return resultNodes
-  }
-
-  isDescendant = (parent, child) => {
-    return parent.contains(child)
-  }
-
-  getNodeParentsUntil = (node, untilNode) => {
-    const parentNodes = []
-    let currentNode = node
-
-    while (currentNode !== untilNode) {
-      const parent = currentNode.parentNode
-      parentNodes.push(parent)
-      currentNode = parent
-    }
-
-    return parentNodes
-  }
-
   getSelectedTextNodesFrom = ({ normalizedSelectedNodes, selection }) => {
     return normalizedSelectedNodes.reduce((acc, selectedNode) => {
       // Have to filter text nodes to handle case when selectedNode contains multiple textNodes and not all of them are selected
       acc.push(
-        ...this.getTextNodes(selectedNode).filter((textNode) =>
+        ...getTextNodes(selectedNode).filter((textNode) =>
           selection.containsNode(textNode)
         )
       )
       return acc
     }, [])
-  }
-
-  getTextNodes = (node) => {
-    const recursor = (node) => {
-      let textNodes = []
-      if (node.nodeType !== 3) {
-        if (node.childNodes) {
-          for (let i = 0; i < node.childNodes.length; i++) {
-            textNodes = [...textNodes, ...recursor(node.childNodes[i])]
-          }
-        }
-      } else {
-        textNodes.push(node)
-      }
-
-      return textNodes
-    }
-
-    return recursor(node)
   }
 
   createStyleNode = (tagName) => {
