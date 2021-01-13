@@ -57,7 +57,7 @@ export class Editor {
     const { endOffset, collapsed } = range
     const updatedSelectedNodes = []
     const isSelectionAlreadyWrapped = selectedTextNodes.every((textNode) =>
-      getParentNodeWithTag({
+      this.getParentNodeWithTag({
         node: textNode,
         tagName,
         rootNode: this.editorNode,
@@ -69,7 +69,7 @@ export class Editor {
     selectedTextNodes.forEach((newSelectedTextNode, selectedNodeIndex) => {
       if (!isSelectionAlreadyWrapped) {
         const isAlreadyWrapped = Boolean(
-          getParentNodeWithTag({
+          this.getParentNodeWithTag({
             node: newSelectedTextNode,
             tagName,
             rootNode: this.editorNode,
@@ -136,7 +136,7 @@ export class Editor {
   }) => {
     if (this.isDev) console.log("single text node")
 
-    const styleNode = getParentNodeWithTag({
+    const styleNode = this.getParentNodeWithTag({
       node: newSelectedTextNode,
       tagName,
       rootNode: this.editorNode,
@@ -206,7 +206,7 @@ export class Editor {
       if (this.isDev) console.log("one of multiple nodes is fully selected")
 
       if (isSelectionAlreadyWrapped) {
-        const styleNode = getParentNodeWithTag({
+        const styleNode = this.getParentNodeWithTag({
           node: newSelectedTextNode,
           tagName,
           rootNode: this.editorNode,
@@ -234,7 +234,7 @@ export class Editor {
         )
 
         if (isSelectionAlreadyWrapped) {
-          const styleNode = getParentNodeWithTag({
+          const styleNode = this.getParentNodeWithTag({
             node: newSelectedTextNode,
             tagName,
             rootNode: this.editorNode,
@@ -265,7 +265,7 @@ export class Editor {
         )
 
         if (isSelectionAlreadyWrapped) {
-          const styleNode = getParentNodeWithTag({
+          const styleNode = this.getParentNodeWithTag({
             node: newSelectedTextNode,
             tagName,
             rootNode: this.editorNode,
@@ -440,12 +440,29 @@ export class Editor {
     }, [])
   }
 
+  getParentNodeWithTag = ({ node, tagName, rootNode }) => {
+    return getParentNodeWithTag({
+      node,
+      tagName: tagName === 'H1' || tagName === 'H2' ? 'SPAN' : tagName,
+      rootNode,
+      additionalChecks: [(parentNode) => {
+        if (tagName === 'H1' || tagName === 'H2') {
+          return parentNode.dataset.tag === tagName
+        }
+
+        return true
+      }],
+    })
+  }
+
   createStyleNode = (tagName) => {
     if (tagName !== "H1" && tagName !== "H2") {
       return document.createElement(tagName)
     }
 
-    const styleNode = document.createElement("span")
+    const styleNode = document.createElement("SPAN")
+    styleNode.setAttribute('data-tag', tagName)
+
     this.addStylesForHeading(styleNode, tagName)
 
     return styleNode
