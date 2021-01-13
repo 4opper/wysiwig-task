@@ -10,8 +10,8 @@ export function getNodesBetween(rootNode, node1, node2) {
     const currentChild = rootNode.childNodes[i]
 
     if (
-      this.isDescendant(currentChild, node1) ||
-      this.isDescendant(currentChild, node2)
+      isDescendant(currentChild, node1) ||
+      isDescendant(currentChild, node2)
     ) {
       isBetweenNodes = resultNodes.length === 0
       resultNodes.push(currentChild)
@@ -27,11 +27,11 @@ export function isDescendant(parent, child) {
   return parent.contains(child)
 }
 
-export function getNodeParentsUntil(node, untilNode) {
+export function getNodeParentsUntil(node, rootNode) {
   const parentNodes = []
   let currentNode = node
 
-  while (currentNode !== untilNode) {
+  while (currentNode !== rootNode) {
     const parent = currentNode.parentNode
     parentNodes.push(parent)
     currentNode = parent
@@ -57,4 +57,27 @@ export function getTextNodes (node) {
   }
 
   return recursor(node)
+}
+
+// TODO combine this two methods
+export function isAlreadyWrappedInTag({ node, tagName, rootNode }) {
+  const nodeParents = getNodeParentsUntil(
+    node,
+    rootNode
+  )
+
+  return nodeParents.some(
+    (parentNode) => parentNode.tagName.toLowerCase() === tagName
+  )
+}
+
+export function getParentNodeWithTag({ node, tagName, rootNode }) {
+  const nodeParents = getNodeParentsUntil(
+    node,
+    rootNode
+  )
+
+  return nodeParents.find(
+    (parentNode) => parentNode.tagName.toLowerCase() === tagName
+  )
 }
