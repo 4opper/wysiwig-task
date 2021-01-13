@@ -3,12 +3,7 @@
 // TODO test very well
 // TODO test in different browsers
 // TODO mb move selection + range thinks to separate file also
-import {
-  getNodeParentsUntil,
-  getNodesBetween, getParentNodeWithTag,
-  getTextNodes,
-  isAlreadyWrappedInTag,
-} from './domUtils'
+import { getNodesBetween, getParentNodeWithTag, getTextNodes } from "./domUtils"
 
 export class Editor {
   static DEFAULT_FONT_SIZE = 16
@@ -56,18 +51,27 @@ export class Editor {
       return
     }
 
-    const {
-      endOffset,
-      collapsed,
-    } = range
+    const { endOffset, collapsed } = range
     const updatedSelectedNodes = []
-    const isSelectionAlreadyWrapped = selectedTextNodes.every((textNode) => isAlreadyWrappedInTag({ node: textNode, tagName, rootNode: this.editorNode }))
+    const isSelectionAlreadyWrapped = selectedTextNodes.every((textNode) =>
+      getParentNodeWithTag({
+        node: textNode,
+        tagName,
+        rootNode: this.editorNode,
+      })
+    )
     let updatedStartOffset = undefined
     let updatedEndOffset = undefined
 
     selectedTextNodes.forEach((newSelectedTextNode, selectedNodeIndex) => {
       if (!isSelectionAlreadyWrapped) {
-        const isAlreadyWrapped = isAlreadyWrappedInTag({ node: newSelectedTextNode, tagName, rootNode: this.editorNode })
+        const isAlreadyWrapped = Boolean(
+          getParentNodeWithTag({
+            node: newSelectedTextNode,
+            tagName,
+            rootNode: this.editorNode,
+          })
+        )
 
         if (isAlreadyWrapped) {
           console.log("whole node is already wrapped")
@@ -106,7 +110,11 @@ export class Editor {
     })
 
     if (updatedSelectedNodes.length && !collapsed) {
-      this.updateSelection({ updatedSelectedNodes, updatedStartOffset, updatedEndOffset })
+      this.updateSelection({
+        updatedSelectedNodes,
+        updatedStartOffset,
+        updatedEndOffset,
+      })
     }
 
     // Normalize on removing styles
@@ -115,9 +123,19 @@ export class Editor {
     }
   }
 
-  handleSingleTextNodeSelected = ({ isSelectionAlreadyWrapped, updatedSelectedNodes, newSelectedTextNode, range, tagName }) => {
+  handleSingleTextNodeSelected = ({
+    isSelectionAlreadyWrapped,
+    updatedSelectedNodes,
+    newSelectedTextNode,
+    range,
+    tagName,
+  }) => {
     console.log("single text node")
-    const styleNode = getParentNodeWithTag({ node: newSelectedTextNode, tagName, rootNode: this.editorNode })
+    const styleNode = getParentNodeWithTag({
+      node: newSelectedTextNode,
+      tagName,
+      rootNode: this.editorNode,
+    })
     const replaceWithNodes = []
     const selectedText = range.toString()
     const textBeforeSelected = newSelectedTextNode.data.slice(
@@ -162,12 +180,18 @@ export class Editor {
     }
   }
 
-  handleMultipleTextNodesSelected = ({ isSelectionAlreadyWrapped, updatedSelectedNodes, newSelectedTextNode, range, tagName, selectedTextNodes }) => {
+  handleMultipleTextNodesSelected = ({
+    isSelectionAlreadyWrapped,
+    updatedSelectedNodes,
+    newSelectedTextNode,
+    range,
+    tagName,
+    selectedTextNodes,
+  }) => {
     const { startOffset, endOffset, endContainer } = range
     const isFirstNode = newSelectedTextNode === selectedTextNodes[0]
     const isLastNode =
-      newSelectedTextNode ===
-      selectedTextNodes[selectedTextNodes.length - 1]
+      newSelectedTextNode === selectedTextNodes[selectedTextNodes.length - 1]
 
     if (
       (isFirstNode && startOffset === 0) ||
@@ -176,7 +200,11 @@ export class Editor {
     ) {
       console.log("one of multiple nodes is fully selected")
       if (isSelectionAlreadyWrapped) {
-        const styleNode = getParentNodeWithTag({ node: newSelectedTextNode, tagName, rootNode: this.editorNode })
+        const styleNode = getParentNodeWithTag({
+          node: newSelectedTextNode,
+          tagName,
+          rootNode: this.editorNode,
+        })
 
         styleNode.replaceWith(styleNode.firstChild)
         updatedSelectedNodes.push(newSelectedTextNode)
@@ -191,17 +219,18 @@ export class Editor {
     } else {
       if (isFirstNode) {
         console.log("first of multiple nodes is not fully selected")
-        const notSelectedText = newSelectedTextNode.data.slice(
-          0,
-          startOffset
-        )
+        const notSelectedText = newSelectedTextNode.data.slice(0, startOffset)
         const selectedText = newSelectedTextNode.data.slice(
           startOffset,
           newSelectedTextNode.length
         )
 
         if (isSelectionAlreadyWrapped) {
-          const styleNode = getParentNodeWithTag({ node: newSelectedTextNode, tagName, rootNode: this.editorNode })
+          const styleNode = getParentNodeWithTag({
+            node: newSelectedTextNode,
+            tagName,
+            rootNode: this.editorNode,
+          })
           const textNodeWithoutStyle = Editor.createTextNode(selectedText)
           const tagNode = this.createStyleNode(tagName)
 
@@ -226,7 +255,11 @@ export class Editor {
         )
 
         if (isSelectionAlreadyWrapped) {
-          const styleNode = getParentNodeWithTag({ node: newSelectedTextNode, tagName, rootNode: this.editorNode })
+          const styleNode = getParentNodeWithTag({
+            node: newSelectedTextNode,
+            tagName,
+            rootNode: this.editorNode,
+          })
           const textNodeWithoutStyle = Editor.createTextNode(selectedText)
           const tagNode = this.createStyleNode(tagName)
 
@@ -244,7 +277,11 @@ export class Editor {
     }
   }
 
-  updateSelection = ({ updatedSelectedNodes, updatedStartOffset, updatedEndOffset }) => {
+  updateSelection = ({
+    updatedSelectedNodes,
+    updatedStartOffset,
+    updatedEndOffset,
+  }) => {
     const startNode = updatedSelectedNodes[0]
     const endNode = updatedSelectedNodes[updatedSelectedNodes.length - 1]
     console.log("updatedSelectedNodes: ", updatedSelectedNodes)
@@ -256,7 +293,7 @@ export class Editor {
       endOffset: updatedEndOffset || endNode.textContent.length || 1,
     })
   }
-  
+
   normalizeSelectedNodes = (updatedSelectedNodes) => {
     updatedSelectedNodes.forEach((updatedNode) => {
       const parent = updatedNode.parentNode

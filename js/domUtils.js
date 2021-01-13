@@ -27,20 +27,7 @@ export function isDescendant(parent, child) {
   return parent.contains(child)
 }
 
-export function getNodeParentsUntil(node, rootNode) {
-  const parentNodes = []
-  let currentNode = node
-
-  while (currentNode !== rootNode) {
-    const parent = currentNode.parentNode
-    parentNodes.push(parent)
-    currentNode = parent
-  }
-
-  return parentNodes
-}
-
-export function getTextNodes (node) {
+export function getTextNodes(node) {
   const recursor = (node) => {
     let textNodes = []
     if (node.nodeType !== 3) {
@@ -59,25 +46,23 @@ export function getTextNodes (node) {
   return recursor(node)
 }
 
-// TODO combine this two methods
-export function isAlreadyWrappedInTag({ node, tagName, rootNode }) {
-  const nodeParents = getNodeParentsUntil(
-    node,
-    rootNode
-  )
-
-  return nodeParents.some(
-    (parentNode) => parentNode.tagName.toLowerCase() === tagName
-  )
-}
-
 export function getParentNodeWithTag({ node, tagName, rootNode }) {
-  const nodeParents = getNodeParentsUntil(
-    node,
-    rootNode
-  )
+  const nodeParents = getNodeParentsUntil(node, rootNode)
 
   return nodeParents.find(
     (parentNode) => parentNode.tagName.toLowerCase() === tagName
   )
+}
+
+function getNodeParentsUntil(node, rootNode) {
+  const parentNodes = []
+  let currentNode = node
+
+  while (currentNode !== rootNode) {
+    const parent = currentNode.parentNode
+    parentNodes.push(parent)
+    currentNode = parent
+  }
+
+  return parentNodes
 }
