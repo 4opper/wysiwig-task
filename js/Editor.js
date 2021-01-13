@@ -1,5 +1,4 @@
 // TODO refactor
-// TODO use tagName uppercased (as it is in node) to decrease change of error
 // TODO test very well
 // TODO test in different browsers
 // TODO mb move selection + range thinks to separate file also
@@ -31,17 +30,40 @@ export class Editor {
     selection.addRange(range)
   }
 
-  constructor(editorNode) {
+  constructor(editorNode, isDev = false) {
     this.editorNode = editorNode
+    this.isDev = isDev
   }
 
-  handleItalicClick = () => this.handleActionClick("i")
+  init = () => {
+    const testNode = document.querySelector(".js-debug")
 
-  handleBoldClick = () => this.handleActionClick("b")
+    document.querySelector(".js-toolkit").addEventListener("click", (e) => {
+      if (e.target !== e.currentTarget) {
+        const buttonNode =
+          e.target.tagName === "BUTTON" ? e.target : e.target.parentNode
+        const wrapperTagName = buttonNode.dataset.tag
 
-  handleH1Click = () => this.handleActionClick("h1")
+        this.handleActionClick(wrapperTagName)
 
-  handleH2Click = () => this.handleActionClick("h2")
+        if (this.isDev) {
+          testNode.innerText = ""
+          Array.from(this.editorNode.childNodes).forEach((childNode) => {
+            testNode.innerText += `${childNode.outerHTML || childNode.data}\n`
+          })
+        }
+      }
+    })
+
+    if (this.isDev) {
+      this.editorNode.addEventListener("input", () => {
+        testNode.innerText = ""
+        Array.from(this.editorNode.childNodes).forEach((childNode) => {
+          testNode.innerText += `${childNode.outerHTML || childNode.data}\n`
+        })
+      })
+    }
+  }
 
   handleActionClick = (tagName) => {
     const selectedTextNodes = this.getSelectedTextNodes()
@@ -74,7 +96,8 @@ export class Editor {
         )
 
         if (isAlreadyWrapped) {
-          console.log("whole node is already wrapped")
+          if (this.isDev) console.log("whole node is already wrapped")
+
           if (selectedNodeIndex === 0) {
             updatedStartOffset = endOffset
           }
@@ -130,7 +153,8 @@ export class Editor {
     range,
     tagName,
   }) => {
-    console.log("single text node")
+    if (this.isDev) console.log("single text node")
+
     const styleNode = getParentNodeWithTag({
       node: newSelectedTextNode,
       tagName,
@@ -198,7 +222,8 @@ export class Editor {
       (isLastNode && endOffset === endContainer.length) ||
       (!isFirstNode && !isLastNode)
     ) {
-      console.log("one of multiple nodes is fully selected")
+      if (this.isDev) console.log("one of multiple nodes is fully selected")
+
       if (isSelectionAlreadyWrapped) {
         const styleNode = getParentNodeWithTag({
           node: newSelectedTextNode,
@@ -218,7 +243,9 @@ export class Editor {
       }
     } else {
       if (isFirstNode) {
-        console.log("first of multiple nodes is not fully selected")
+        if (this.isDev)
+          console.log("first of multiple nodes is not fully selected")
+
         const notSelectedText = newSelectedTextNode.data.slice(0, startOffset)
         const selectedText = newSelectedTextNode.data.slice(
           startOffset,
@@ -247,7 +274,9 @@ export class Editor {
       }
 
       if (isLastNode) {
-        console.log("last of multiple nodes is not fully selected")
+        if (this.isDev)
+          console.log("last of multiple nodes is not fully selected")
+
         const selectedText = newSelectedTextNode.data.slice(0, endOffset)
         const notSelectedText = newSelectedTextNode.data.slice(
           endOffset,
@@ -284,7 +313,8 @@ export class Editor {
   }) => {
     const startNode = updatedSelectedNodes[0]
     const endNode = updatedSelectedNodes[updatedSelectedNodes.length - 1]
-    console.log("updatedSelectedNodes: ", updatedSelectedNodes)
+
+    if (this.isDev) console.log("updatedSelectedNodes: ", updatedSelectedNodes)
 
     Editor.selectRange({
       startNode,
@@ -338,7 +368,7 @@ export class Editor {
       })
     }
 
-    console.log("original selectedNodes: ", selectedNodes)
+    if (this.isDev) console.log("original selectedNodes: ", selectedNodes)
 
     return selectedTextNodes
   }
@@ -355,7 +385,8 @@ export class Editor {
           const result = range.startOffset < selectedNode.textContent.length
 
           if (!result) {
-            console.log("update start")
+            if (this.isDev) console.log("update start")
+
             shouldCorrectSelectionStart = true
           }
 
@@ -366,7 +397,8 @@ export class Editor {
           const result = range.endOffset > 0
 
           if (!result) {
-            console.log("update end")
+            if (this.isDev) console.log("update end")
+
             shouldCorrectSelectionEnd = true
           }
 
@@ -427,7 +459,7 @@ export class Editor {
   }
 
   createStyleNode = (tagName) => {
-    if (tagName !== "h1" && tagName !== "h2") {
+    if (tagName !== "H1" && tagName !== "H2") {
       return document.createElement(tagName)
     }
 
@@ -440,9 +472,9 @@ export class Editor {
   addStylesForHeading = (node, tagName) => {
     node.style.fontWeight = "bold"
 
-    if (tagName === "h1") {
+    if (tagName === "H1") {
       node.style.fontSize = `${Editor.DEFAULT_FONT_SIZE * 2}px`
-    } else if (tagName === "h2") {
+    } else if (tagName === "H2") {
       node.style.fontSize = `${Editor.DEFAULT_FONT_SIZE * 1.5}px`
     }
   }

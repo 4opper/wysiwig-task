@@ -23,8 +23,10 @@ export function getNodesBetween(rootNode, node1, node2) {
   return resultNodes
 }
 
-export function isDescendant(parent, child) {
-  return parent.contains(child)
+export function getParentNodeWithTag({ node, tagName, rootNode }) {
+  const nodeParents = getNodeParentsUntil(node, rootNode)
+
+  return nodeParents.find((parentNode) => parentNode.tagName === tagName)
 }
 
 export function getTextNodes(node) {
@@ -46,12 +48,8 @@ export function getTextNodes(node) {
   return recursor(node)
 }
 
-export function getParentNodeWithTag({ node, tagName, rootNode }) {
-  const nodeParents = getNodeParentsUntil(node, rootNode)
-
-  return nodeParents.find(
-    (parentNode) => parentNode.tagName.toLowerCase() === tagName
-  )
+function isDescendant(parent, child) {
+  return parent.contains(child)
 }
 
 function getNodeParentsUntil(node, rootNode) {
