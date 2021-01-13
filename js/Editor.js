@@ -241,8 +241,6 @@ export class Editor {
     const node2 = selection.focusNode
     const selectionAncestor = range.commonAncestorContainer
 
-    debugger
-
     if (selectionAncestor == null) {
       return { selectedTextNodes: [] }
     }
@@ -312,31 +310,25 @@ export class Editor {
   }
 
   getNodesBetween = (rootNode, node1, node2) => {
-    var resultNodes = [];
-    var isBetweenNodes = false;
-    for (var i = 0; i < rootNode.childNodes.length; i+= 1) {
-      if (this.isDescendant(rootNode.childNodes[i], node1) || this.isDescendant(rootNode.childNodes[i], node2)) {
-        if (resultNodes.length == 0) {
-          isBetweenNodes = true;
-        } else {
-          isBetweenNodes = false;
-        }
-        resultNodes.push(rootNode.childNodes[i]);
-      } else if (resultNodes.length == 0) {
-      } else if (isBetweenNodes) {
-        resultNodes.push(rootNode.childNodes[i]);
-      } else {
-        return resultNodes;
-      }
-    };
-    if (resultNodes.length == 0) {
-      return [rootNode];
-    } else if (this.isDescendant(resultNodes[resultNodes.length - 1], node1) || this.isDescendant(resultNodes[resultNodes.length - 1], node2)) {
-      return resultNodes;
-    } else {
-      // same child node for both should never happen
-      return [resultNodes[0]];
+    let resultNodes = []
+    let isBetweenNodes = false
+
+    if (rootNode.isSameNode(node1) && node1.isSameNode(node2)) {
+      return [rootNode]
     }
+
+    for (let i = 0; i < rootNode.childNodes.length; i++) {
+      const currentChild = rootNode.childNodes[i]
+
+      if (this.isDescendant(currentChild, node1) || this.isDescendant(currentChild, node2)) {
+        isBetweenNodes = resultNodes.length === 0;
+        resultNodes.push(currentChild)
+      } else if (isBetweenNodes) {
+        resultNodes.push(currentChild)
+      }
+    }
+
+    return resultNodes
   }
 
   isDescendant = (parent, child) => {
