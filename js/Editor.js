@@ -247,10 +247,11 @@ export class Editor {
 
     const selectedNodes = this.getNodesBetween(selectionAncestor, node1, node2)
 
-    // TODO test cases with multiple lines, with and without empty selections on the end
     let hasUpdatedStart = false
     let hasUpdatedEnd = false
-    // Filters out nodes that don't have selected chars
+
+    // Filters out selected nodes that don't have any selected chars - happens when
+    // empty nodes or nodes selected before very beginning of node or after the very end of node
     const filteredSelectedNodes = selectedNodes.filter((selectedNode, index) => {
       if (index === 0) {
         const result = range.startOffset >= selectedNode.textContent.length ? false : true
@@ -280,7 +281,8 @@ export class Editor {
     const selectedTextNodes = []
 
     filteredSelectedNodes.forEach(selectedNode => {
-      selectedTextNodes.push(...this.getTextNodes(selectedNode))
+      // Have to filter text nodes to handle case when selectedNode contains multiple textNodes and not all of them are selected
+      selectedTextNodes.push(...this.getTextNodes(selectedNode).filter(textNode => selection.containsNode(textNode)))
     })
 
     if (hasUpdatedStart && hasUpdatedEnd) {
