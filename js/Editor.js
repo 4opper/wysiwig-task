@@ -198,8 +198,11 @@ export class Editor {
         rootNode: this.editorNode,
       })
 
-      styleNode.replaceWith(styleNode.firstChild)
-      updatedSelectedNodes.push(selectedTextNode)
+      // As we use childNodes in some iteration after the first one it's possible that styleNode is already replaced
+      if (styleNode) {
+        updatedSelectedNodes.push(...styleNode.childNodes)
+        styleNode.replaceWith(...styleNode.childNodes)
+      }
     } else {
       const { startOffset, endOffset, endContainer } = range
       const isFirstNode = selectedTextNode === selectedTextNodes[0]
