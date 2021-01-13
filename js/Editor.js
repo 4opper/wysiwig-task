@@ -42,7 +42,7 @@ export class Editor {
   handleH2Click = () => this.handleActionClick('h2')
 
   handleActionClick = (tagName) => {
-    const { selectedTextNodes } = this.getSelectedNodes()
+    const selectedTextNodes = this.getSelectedTextNodes()
     const range = Editor.getRange()
     console.log("selectedTextNodes: ", selectedTextNodes)
 
@@ -231,7 +231,7 @@ export class Editor {
     }
   }
 
-  getSelectedNodes = () => {
+  getSelectedTextNodes = () => {
     const selection = Editor.getSelection();
 
     if (selection.isCollapsed || !selection.rangeCount) {
@@ -257,7 +257,7 @@ export class Editor {
 
     console.log("original selectedNodes: ", selectedNodes)
 
-    return { selectedTextNodes }
+    return selectedTextNodes
   }
 
   // Filters out selected nodes that don't have any selected chars - happens when
