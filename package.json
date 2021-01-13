@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "parcel index.html",
+    "prettier": "npx prettier --write js/",
     "build": "parcel build index.html"
   },
   "repository": {
@@ -19,6 +20,7 @@
   },
   "homepage": "https://github.com/4opper/wysiwig-task#readme",
   "devDependencies": {
-    "parcel-bundler": "^1.12.4"
+    "parcel-bundler": "^1.12.4",
+    "prettier": "2.2.1"
   }
 }

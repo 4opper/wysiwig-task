@@ -29,17 +29,17 @@ export class Editor {
     selection.addRange(range)
   }
 
-  constructor (editorNode) {
+  constructor(editorNode) {
     this.editorNode = editorNode
   }
 
-  handleItalicClick = () => this.handleActionClick('i')
+  handleItalicClick = () => this.handleActionClick("i")
 
-  handleBoldClick = () => this.handleActionClick('b')
+  handleBoldClick = () => this.handleActionClick("b")
 
-  handleH1Click = () => this.handleActionClick('h1')
+  handleH1Click = () => this.handleActionClick("h1")
 
-  handleH2Click = () => this.handleActionClick('h2')
+  handleH2Click = () => this.handleActionClick("h2")
 
   handleActionClick = (tagName) => {
     const selectedTextNodes = this.getSelectedTextNodes()
@@ -50,30 +50,52 @@ export class Editor {
       console.log("not focused or nothing is selected")
       return
     }
-    
-    let { startContainer, startOffset, endContainer, endOffset, collapsed } = range
+
+    let {
+      startContainer,
+      startOffset,
+      endContainer,
+      endOffset,
+      collapsed,
+    } = range
     const updatedSelectedNodes = []
     let updatedStartOffset = undefined
     let updatedEndOffset = undefined
 
-    const isSelectionAlreadyWrapped = selectedTextNodes.every(textNode => {
-      const textNodeParents = this.getNodeParentsUntil(textNode, this.editorNode)
+    const isSelectionAlreadyWrapped = selectedTextNodes.every((textNode) => {
+      const textNodeParents = this.getNodeParentsUntil(
+        textNode,
+        this.editorNode
+      )
 
-      return textNodeParents.some(parentNode => parentNode.tagName.toLowerCase() === tagName)
+      return textNodeParents.some(
+        (parentNode) => parentNode.tagName.toLowerCase() === tagName
+      )
     })
 
-    if (isSelectionAlreadyWrapped) /*remove styles case*/ {
-      console.log("already wrapped")
+    if (isSelectionAlreadyWrapped) {
+      /*remove styles case*/ console.log("already wrapped")
 
       selectedTextNodes.forEach((newSelectedTextNode) => {
         if (selectedTextNodes.length === 1) {
           console.log("single text node")
-          const textNodeParents = this.getNodeParentsUntil(newSelectedTextNode, this.editorNode)
-          const styleNode = textNodeParents.find(parentNode => parentNode.tagName.toLowerCase() === tagName)
+          const textNodeParents = this.getNodeParentsUntil(
+            newSelectedTextNode,
+            this.editorNode
+          )
+          const styleNode = textNodeParents.find(
+            (parentNode) => parentNode.tagName.toLowerCase() === tagName
+          )
           const replaceWithNodes = []
           const selectedText = range.toString()
-          const textBeforeSelected = newSelectedTextNode.data.slice(0, range.startOffset)
-          const textAfterSelected = newSelectedTextNode.data.slice(range.endOffset, newSelectedTextNode.length)
+          const textBeforeSelected = newSelectedTextNode.data.slice(
+            0,
+            range.startOffset
+          )
+          const textAfterSelected = newSelectedTextNode.data.slice(
+            range.endOffset,
+            newSelectedTextNode.length
+          )
 
           if (textBeforeSelected) {
             const tagNode = this.createStyleNode(tagName)
@@ -96,20 +118,42 @@ export class Editor {
           styleNode.replaceWith(...replaceWithNodes)
         } else {
           const isFirstNode = newSelectedTextNode === selectedTextNodes[0]
-          const isLastNode = newSelectedTextNode === selectedTextNodes[selectedTextNodes.length - 1]
+          const isLastNode =
+            newSelectedTextNode ===
+            selectedTextNodes[selectedTextNodes.length - 1]
 
-          if ((isFirstNode && startOffset === 0) || (isLastNode && endOffset === endContainer.length) || (!isFirstNode && !isLastNode))  {
+          if (
+            (isFirstNode && startOffset === 0) ||
+            (isLastNode && endOffset === endContainer.length) ||
+            (!isFirstNode && !isLastNode)
+          ) {
             console.log("one of multiple nodes is fully selected")
-            const textNodeParents = this.getNodeParentsUntil(newSelectedTextNode, this.editorNode)
-            const styleNode = textNodeParents.find(parentNode => parentNode.tagName.toLowerCase() === tagName)
+            const textNodeParents = this.getNodeParentsUntil(
+              newSelectedTextNode,
+              this.editorNode
+            )
+            const styleNode = textNodeParents.find(
+              (parentNode) => parentNode.tagName.toLowerCase() === tagName
+            )
             styleNode.replaceWith(styleNode.firstChild)
             updatedSelectedNodes.push(newSelectedTextNode)
           } else {
             if (isFirstNode) {
-              const textNodeParents = this.getNodeParentsUntil(newSelectedTextNode, this.editorNode)
-              const styleNode = textNodeParents.find(parentNode => parentNode.tagName.toLowerCase() === tagName)
-              const notSelectedText = newSelectedTextNode.data.slice(0, startOffset)
-              const selectedText = newSelectedTextNode.data.slice(startOffset, newSelectedTextNode.length)
+              const textNodeParents = this.getNodeParentsUntil(
+                newSelectedTextNode,
+                this.editorNode
+              )
+              const styleNode = textNodeParents.find(
+                (parentNode) => parentNode.tagName.toLowerCase() === tagName
+              )
+              const notSelectedText = newSelectedTextNode.data.slice(
+                0,
+                startOffset
+              )
+              const selectedText = newSelectedTextNode.data.slice(
+                startOffset,
+                newSelectedTextNode.length
+              )
               const textNodeWithoutStyle = Editor.createTextNode(selectedText)
               const tagNode = this.createStyleNode(tagName)
               tagNode.append(notSelectedText)
@@ -119,10 +163,18 @@ export class Editor {
             }
 
             if (isLastNode) {
-              const textNodeParents = this.getNodeParentsUntil(newSelectedTextNode, this.editorNode)
-              const styleNode = textNodeParents.find(parentNode => parentNode.tagName.toLowerCase() === tagName)
+              const textNodeParents = this.getNodeParentsUntil(
+                newSelectedTextNode,
+                this.editorNode
+              )
+              const styleNode = textNodeParents.find(
+                (parentNode) => parentNode.tagName.toLowerCase() === tagName
+              )
               const selectedText = newSelectedTextNode.data.slice(0, endOffset)
-              const notSelectedText = newSelectedTextNode.data.slice(endOffset, newSelectedTextNode.length)
+              const notSelectedText = newSelectedTextNode.data.slice(
+                endOffset,
+                newSelectedTextNode.length
+              )
               const textNodeWithoutStyle = Editor.createTextNode(selectedText)
               const tagNode = this.createStyleNode(tagName)
               tagNode.append(notSelectedText)
@@ -133,10 +185,15 @@ export class Editor {
           }
         }
       })
-    } else /*add styles case*/ {
+    } /*add styles case*/ else {
       selectedTextNodes.forEach((newSelectedTextNode, selectedNodeIndex) => {
-        const textNodeParents = this.getNodeParentsUntil(newSelectedTextNode, this.editorNode)
-        const isAlreadyWrapped = textNodeParents.some(parentNode => parentNode.tagName.toLowerCase() === tagName)
+        const textNodeParents = this.getNodeParentsUntil(
+          newSelectedTextNode,
+          this.editorNode
+        )
+        const isAlreadyWrapped = textNodeParents.some(
+          (parentNode) => parentNode.tagName.toLowerCase() === tagName
+        )
 
         if (isAlreadyWrapped) {
           console.log("whole node is already wrapped")
@@ -153,12 +210,20 @@ export class Editor {
           return
         }
 
-        if (selectedTextNodes.length === 1) /*Single selectedNode selected or has caret*/ {
-          console.log("single selectedTextNode")
+        if (selectedTextNodes.length === 1) {
+          /*Single selectedNode selected or has caret*/ console.log(
+            "single selectedTextNode"
+          )
           const replaceWithNodes = []
           const selectedText = range.toString()
-          const textBeforeSelected = newSelectedTextNode.data.slice(0, range.startOffset)
-          const textAfterSelected = newSelectedTextNode.data.slice(range.endOffset, newSelectedTextNode.length)
+          const textBeforeSelected = newSelectedTextNode.data.slice(
+            0,
+            range.startOffset
+          )
+          const textAfterSelected = newSelectedTextNode.data.slice(
+            range.endOffset,
+            newSelectedTextNode.length
+          )
           const italicNode = this.createStyleNode(tagName)
 
           if (textBeforeSelected) replaceWithNodes.push(textBeforeSelected)
@@ -168,11 +233,17 @@ export class Editor {
           italicNode.append(selectedText)
           newSelectedTextNode.replaceWith(...replaceWithNodes)
           updatedSelectedNodes.push(italicNode.firstChild)
-        } else /*Multiple selectedNode selected or has caret*/ {
+        } /*Multiple selectedNode selected or has caret*/ else {
           const isFirstNode = newSelectedTextNode === selectedTextNodes[0]
-          const isLastNode = newSelectedTextNode === selectedTextNodes[selectedTextNodes.length - 1]
+          const isLastNode =
+            newSelectedTextNode ===
+            selectedTextNodes[selectedTextNodes.length - 1]
 
-          if ((isFirstNode && startOffset === 0) || (isLastNode && endOffset === endContainer.length) || (!isFirstNode && !isLastNode))  {
+          if (
+            (isFirstNode && startOffset === 0) ||
+            (isLastNode && endOffset === endContainer.length) ||
+            (!isFirstNode && !isLastNode)
+          ) {
             console.log("one of multiple nodes is fully selected")
             const italicNode = this.createStyleNode(tagName)
             const clonedNode = newSelectedTextNode.cloneNode()
@@ -184,8 +255,14 @@ export class Editor {
             if (isFirstNode) {
               console.log("first of multiple nodes is not fully selected")
               const italicNode = this.createStyleNode(tagName)
-              const notSelectedText = newSelectedTextNode.data.slice(0, startOffset)
-              const selectedText = newSelectedTextNode.data.slice(startOffset, newSelectedTextNode.length)
+              const notSelectedText = newSelectedTextNode.data.slice(
+                0,
+                startOffset
+              )
+              const selectedText = newSelectedTextNode.data.slice(
+                startOffset,
+                newSelectedTextNode.length
+              )
 
               italicNode.append(selectedText)
               newSelectedTextNode.replaceWith(notSelectedText, italicNode)
@@ -196,18 +273,20 @@ export class Editor {
               console.log("last of multiple nodes is not fully selected")
               const italicNode = this.createStyleNode(tagName)
               const selectedText = newSelectedTextNode.data.slice(0, endOffset)
-              const notSelectedText = newSelectedTextNode.data.slice(endOffset, newSelectedTextNode.length)
+              const notSelectedText = newSelectedTextNode.data.slice(
+                endOffset,
+                newSelectedTextNode.length
+              )
 
               italicNode.append(selectedText)
               newSelectedTextNode.replaceWith(italicNode, notSelectedText)
               updatedSelectedNodes.push(italicNode.firstChild)
             }
           }
-
         }
       })
     }
-    
+
     if (updatedSelectedNodes.length && !collapsed) {
       const startNode = updatedSelectedNodes[0]
       const endNode = updatedSelectedNodes[updatedSelectedNodes.length - 1]
@@ -223,7 +302,7 @@ export class Editor {
 
     // Normalize on removing styles
     if (updatedSelectedNodes.length && isSelectionAlreadyWrapped) {
-      updatedSelectedNodes.forEach(updatedNode => {
+      updatedSelectedNodes.forEach((updatedNode) => {
         const parent = updatedNode.parentNode
 
         if (parent) parent.normalize()
@@ -232,7 +311,7 @@ export class Editor {
   }
 
   getSelectedTextNodes = () => {
-    const selection = Editor.getSelection();
+    const selection = Editor.getSelection()
 
     if (selection.isCollapsed || !selection.rangeCount) {
       return { selectedTextNodes: [] }
@@ -248,11 +327,23 @@ export class Editor {
     }
 
     const selectedNodes = this.getNodesBetween(selectionAncestor, node1, node2)
-    const { normalizedSelectedNodes, shouldNormalizeSelectionStart, shouldNormalizeSelectionEnd } = this.normalizeSelectedNodes({ selectedNodes, range })
-    const selectedTextNodes = this.getSelectedTextNodesFrom({ normalizedSelectedNodes, selection })
+    const {
+      normalizedSelectedNodes,
+      shouldNormalizeSelectionStart,
+      shouldNormalizeSelectionEnd,
+    } = this.normalizeSelectedNodes({ selectedNodes, range })
+    const selectedTextNodes = this.getSelectedTextNodesFrom({
+      normalizedSelectedNodes,
+      selection,
+    })
 
     if (shouldNormalizeSelectionStart || shouldNormalizeSelectionEnd) {
-      this.normalizeSelection({ shouldNormalizeSelectionStart, shouldNormalizeSelectionEnd, range, selectedTextNodes })
+      this.normalizeSelection({
+        shouldNormalizeSelectionStart,
+        shouldNormalizeSelectionEnd,
+        range,
+        selectedTextNodes,
+      })
     }
 
     console.log("original selectedNodes: ", selectedNodes)
@@ -265,42 +356,54 @@ export class Editor {
   normalizeSelectedNodes = ({ selectedNodes, range }) => {
     let shouldNormalizeSelectionStart = false
     let shouldNormalizeSelectionEnd = false
-    
-    const normalizedSelectedNodes =  selectedNodes.filter((selectedNode, index) => {
-      if (index === 0) {
-        const result = range.startOffset < selectedNode.textContent.length
 
-        if (!result) {
-          console.log("update start")
-          shouldNormalizeSelectionStart = true
+    const normalizedSelectedNodes = selectedNodes.filter(
+      (selectedNode, index) => {
+        if (index === 0) {
+          const result = range.startOffset < selectedNode.textContent.length
+
+          if (!result) {
+            console.log("update start")
+            shouldNormalizeSelectionStart = true
+          }
+
+          return result
         }
 
-        return result
-      }
+        if (index === selectedNodes.length - 1) {
+          const result = range.endOffset > 0
 
-      if (index === selectedNodes.length - 1) {
-        const result = range.endOffset > 0
+          if (!result) {
+            console.log("update end")
+            shouldNormalizeSelectionEnd = true
+          }
 
-        if (!result) {
-          console.log("update end")
-          shouldNormalizeSelectionEnd = true
+          return result
         }
 
-        return result
+        return true
       }
+    )
 
-      return true
-    })
-
-    return { normalizedSelectedNodes, shouldNormalizeSelectionStart, shouldNormalizeSelectionEnd }
+    return {
+      normalizedSelectedNodes,
+      shouldNormalizeSelectionStart,
+      shouldNormalizeSelectionEnd,
+    }
   }
 
-  normalizeSelection = ({ shouldNormalizeSelectionStart, shouldNormalizeSelectionEnd, selectedTextNodes, range }) => {
+  normalizeSelection = ({
+    shouldNormalizeSelectionStart,
+    shouldNormalizeSelectionEnd,
+    selectedTextNodes,
+    range,
+  }) => {
     if (shouldNormalizeSelectionStart && shouldNormalizeSelectionEnd) {
       Editor.selectRange({
         startNode: selectedTextNodes[0],
         endNode: selectedTextNodes[selectedTextNodes.length - 1],
-        endOffset: selectedTextNodes[selectedTextNodes.length - 1].textContent.length,
+        endOffset:
+          selectedTextNodes[selectedTextNodes.length - 1].textContent.length,
       })
     } else if (shouldNormalizeSelectionStart) {
       Editor.selectRange({
@@ -313,7 +416,8 @@ export class Editor {
         startNode: range.startContainer,
         startOffset: range.startOffset,
         endNode: selectedTextNodes[selectedTextNodes.length - 1],
-        endOffset: selectedTextNodes[selectedTextNodes.length - 1].textContent.length,
+        endOffset:
+          selectedTextNodes[selectedTextNodes.length - 1].textContent.length,
       })
     }
   }
@@ -329,8 +433,11 @@ export class Editor {
     for (let i = 0; i < rootNode.childNodes.length; i++) {
       const currentChild = rootNode.childNodes[i]
 
-      if (this.isDescendant(currentChild, node1) || this.isDescendant(currentChild, node2)) {
-        isBetweenNodes = resultNodes.length === 0;
+      if (
+        this.isDescendant(currentChild, node1) ||
+        this.isDescendant(currentChild, node2)
+      ) {
+        isBetweenNodes = resultNodes.length === 0
         resultNodes.push(currentChild)
       } else if (isBetweenNodes) {
         resultNodes.push(currentChild)
@@ -360,7 +467,11 @@ export class Editor {
   getSelectedTextNodesFrom = ({ normalizedSelectedNodes, selection }) => {
     return normalizedSelectedNodes.reduce((acc, selectedNode) => {
       // Have to filter text nodes to handle case when selectedNode contains multiple textNodes and not all of them are selected
-      acc.push(...this.getTextNodes(selectedNode).filter(textNode => selection.containsNode(textNode)))
+      acc.push(
+        ...this.getTextNodes(selectedNode).filter((textNode) =>
+          selection.containsNode(textNode)
+        )
+      )
       return acc
     }, [])
   }
@@ -385,22 +496,22 @@ export class Editor {
   }
 
   createStyleNode = (tagName) => {
-    if (tagName !== 'h1' && tagName !== 'h2') {
+    if (tagName !== "h1" && tagName !== "h2") {
       return document.createElement(tagName)
     }
 
-    const styleNode = document.createElement('span')
+    const styleNode = document.createElement("span")
     this.addStylesForHeading(styleNode, tagName)
 
     return styleNode
   }
 
   addStylesForHeading = (node, tagName) => {
-    node.style.fontWeight = 'bold'
+    node.style.fontWeight = "bold"
 
-    if (tagName === 'h1') {
+    if (tagName === "h1") {
       node.style.fontSize = `${Editor.DEFAULT_FONT_SIZE * 2}px`
-    } else if (tagName === 'h2') {
+    } else if (tagName === "h2") {
       node.style.fontSize = `${Editor.DEFAULT_FONT_SIZE * 1.5}px`
     }
   }
