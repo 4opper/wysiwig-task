@@ -144,33 +144,16 @@ export class Editor {
     })
     const replaceWithNodes = []
     const selectedText = range.toString()
-    const textBeforeSelected = selectedTextNode.data.slice(0, range.startOffset)
-    const textAfterSelected = selectedTextNode.data.slice(
-      range.endOffset,
-      selectedTextNode.length
-    )
 
     if (isSelectionAlreadyWrapped) {
-      if (textBeforeSelected) {
-        const tagNode = this.createStyleNode(tagName)
-        tagNode.append(textBeforeSelected)
-        replaceWithNodes.push(tagNode)
-      }
-
-      if (selectedText) {
-        const textNodeWithoutStyle = createTextNode(selectedText)
-        replaceWithNodes.push(textNodeWithoutStyle)
-        updatedSelectedNodes.push(textNodeWithoutStyle)
-      }
-
-      if (textAfterSelected) {
-        const tagNode = this.createStyleNode(tagName)
-        tagNode.append(textAfterSelected)
-        replaceWithNodes.push(tagNode)
-      }
-
-      styleNode.replaceWith(...replaceWithNodes)
+      updatedSelectedNodes.push(...Array.from(styleNode.childNodes).map(getTextNodes).flat())
+      styleNode.replaceWith(...styleNode.childNodes)
     } else {
+      const textBeforeSelected = selectedTextNode.data.slice(0, range.startOffset)
+      const textAfterSelected = selectedTextNode.data.slice(
+        range.endOffset,
+        selectedTextNode.length
+      )
       const wrapperNode = this.createStyleNode(tagName)
 
       if (textBeforeSelected) replaceWithNodes.push(textBeforeSelected)
@@ -183,6 +166,7 @@ export class Editor {
     }
   }
 
+  // TODO fix 6 chars -> italic 2 middle -> italic 2-3 -> try remove
   handleMultipleTextNodesSelected = ({
     isSelectionAlreadyWrapped,
     updatedSelectedNodes,
