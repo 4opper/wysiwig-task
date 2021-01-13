@@ -1,6 +1,8 @@
 // TODO refactor
 // TODO test very well
 // TODO test in different browsers
+// TODO move dom things into separate file
+// TODO mb move selection + range thinks to separate file also
 export class Editor {
   static DEFAULT_FONT_SIZE = 16
 
@@ -30,6 +32,14 @@ export class Editor {
   constructor (editorNode) {
     this.editorNode = editorNode
   }
+
+  handleItalicClick = () => this.handleActionClick('i')
+
+  handleBoldClick = () => this.handleActionClick('b')
+
+  handleH1Click = () => this.handleActionClick('h1')
+
+  handleH2Click = () => this.handleActionClick('h2')
 
   handleActionClick = (tagName) => {
     const { selectedTextNodes } = this.getSelectedNodes()
@@ -221,14 +231,6 @@ export class Editor {
     }
   }
 
-  handleItalicClick = () => this.handleActionClick('i')
-
-  handleBoldClick = () => this.handleActionClick('b')
-
-  handleH1Click = () => this.handleActionClick('h1')
-
-  handleH2Click = () => this.handleActionClick('h2')
-
   getSelectedNodes = () => {
     const selection = Editor.getSelection();
 
@@ -246,30 +248,42 @@ export class Editor {
     }
 
     const selectedNodes = this.getNodesBetween(selectionAncestor, node1, node2)
+    const { normalizedSelectedNodes, shouldNormalizeSelectionStart, shouldNormalizeSelectionEnd } = this.normalizeSelectedNodes({ selectedNodes, range })
+    const selectedTextNodes = this.getSelectedTextNodesFrom({ normalizedSelectedNodes, selection })
 
-    let hasUpdatedStart = false
-    let hasUpdatedEnd = false
+    if (shouldNormalizeSelectionStart || shouldNormalizeSelectionEnd) {
+      this.normalizeSelection({ shouldNormalizeSelectionStart, shouldNormalizeSelectionEnd, range, selectedTextNodes })
+    }
 
-    // Filters out selected nodes that don't have any selected chars - happens when
-    // empty nodes or nodes selected before very beginning of node or after the very end of node
-    const filteredSelectedNodes = selectedNodes.filter((selectedNode, index) => {
+    console.log("original selectedNodes: ", selectedNodes)
+
+    return { selectedTextNodes }
+  }
+
+  // Filters out selected nodes that don't have any selected chars - happens when
+  // empty nodes or nodes selected before very beginning of node or after the very end of node
+  normalizeSelectedNodes = ({ selectedNodes, range }) => {
+    let shouldNormalizeSelectionStart = false
+    let shouldNormalizeSelectionEnd = false
+    
+    const normalizedSelectedNodes =  selectedNodes.filter((selectedNode, index) => {
       if (index === 0) {
-        const result = range.startOffset >= selectedNode.textContent.length ? false : true
+        const result = range.startOffset < selectedNode.textContent.length
 
         if (!result) {
           console.log("update start")
-          hasUpdatedStart = true
+          shouldNormalizeSelectionStart = true
         }
 
         return result
       }
 
       if (index === selectedNodes.length - 1) {
-        const result = range.endOffset <= 0 ? false : true
+        const result = range.endOffset > 0
 
         if (!result) {
           console.log("update end")
-          hasUpdatedEnd = true
+          shouldNormalizeSelectionEnd = true
         }
 
         return result
@@ -277,27 +291,24 @@ export class Editor {
 
       return true
     })
-    // TODO make it in single iteration
-    const selectedTextNodes = []
 
-    filteredSelectedNodes.forEach(selectedNode => {
-      // Have to filter text nodes to handle case when selectedNode contains multiple textNodes and not all of them are selected
-      selectedTextNodes.push(...this.getTextNodes(selectedNode).filter(textNode => selection.containsNode(textNode)))
-    })
+    return { normalizedSelectedNodes, shouldNormalizeSelectionStart, shouldNormalizeSelectionEnd }
+  }
 
-    if (hasUpdatedStart && hasUpdatedEnd) {
+  normalizeSelection = ({ shouldNormalizeSelectionStart, shouldNormalizeSelectionEnd, selectedTextNodes, range }) => {
+    if (shouldNormalizeSelectionStart && shouldNormalizeSelectionEnd) {
       Editor.selectRange({
         startNode: selectedTextNodes[0],
         endNode: selectedTextNodes[selectedTextNodes.length - 1],
         endOffset: selectedTextNodes[selectedTextNodes.length - 1].textContent.length,
       })
-    } else if (hasUpdatedStart) {
+    } else if (shouldNormalizeSelectionStart) {
       Editor.selectRange({
         startNode: selectedTextNodes[0],
         endNode: range.endContainer,
         endOffset: range.endOffset,
       })
-    } else if (hasUpdatedEnd) {
+    } else if (shouldNormalizeSelectionEnd) {
       Editor.selectRange({
         startNode: range.startContainer,
         startOffset: range.startOffset,
@@ -305,10 +316,6 @@ export class Editor {
         endOffset: selectedTextNodes[selectedTextNodes.length - 1].textContent.length,
       })
     }
-
-    console.log("original selectedNodes: ", selectedNodes)
-
-    return { selectedTextNodes }
   }
 
   getNodesBetween = (rootNode, node1, node2) => {
@@ -348,6 +355,14 @@ export class Editor {
     }
 
     return parentNodes
+  }
+
+  getSelectedTextNodesFrom = ({ normalizedSelectedNodes, selection }) => {
+    return normalizedSelectedNodes.reduce((acc, selectedNode) => {
+      // Have to filter text nodes to handle case when selectedNode contains multiple textNodes and not all of them are selected
+      acc.push(...this.getTextNodes(selectedNode).filter(textNode => selection.containsNode(textNode)))
+      return acc
+    }, [])
   }
 
   getTextNodes = (node) => {
