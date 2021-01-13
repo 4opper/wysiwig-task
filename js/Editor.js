@@ -1,38 +1,19 @@
-// TODO refactor
+// TODO fix removing headings
 // TODO test very well
 // TODO test in different browsers
-// TODO mb move selection + range thinks to separate file also
-import { getNodesBetween, getParentNodeWithTag, getTextNodes } from "./domUtils"
+import {
+  createTextNode,
+  getNodesBetween,
+  getParentNodeWithTag,
+  getTextNodes,
+} from "./domUtils"
+import { getRange, getSelection, selectRange } from "./selectionUtils"
 
 export class Editor {
-  static DEFAULT_FONT_SIZE = 16
-
-  static getSelection = () => document.getSelection()
-
-  static getRange = () => Editor.getSelection().getRangeAt(0)
-
-  static createRange = () => document.createRange()
-
-  static createTextNode = (text) => document.createTextNode(text)
-
-  static selectRange = ({
-    startNode,
-    startOffset = 0,
-    endNode,
-    endOffset = 1,
-  }) => {
-    const range = Editor.createRange()
-    const selection = Editor.getSelection()
-
-    selection.removeAllRanges()
-    range.setStart(startNode, startOffset)
-    range.setEnd(endNode, endOffset)
-    selection.addRange(range)
-  }
-
-  constructor(editorNode, isDev = false) {
+  constructor({ editorNode, isDev = false, defaultFontSize = 16 }) {
     this.editorNode = editorNode
     this.isDev = isDev
+    this.defaultFontSize = defaultFontSize
   }
 
   init = () => {
@@ -67,7 +48,7 @@ export class Editor {
 
   handleActionClick = (tagName) => {
     const selectedTextNodes = this.getSelectedTextNodes()
-    const range = Editor.getRange()
+    const range = getRange()
 
     if (!range) {
       return
@@ -179,7 +160,7 @@ export class Editor {
       }
 
       if (selectedText) {
-        const textNodeWithoutStyle = Editor.createTextNode(selectedText)
+        const textNodeWithoutStyle = createTextNode(selectedText)
         replaceWithNodes.push(textNodeWithoutStyle)
         updatedSelectedNodes.push(textNodeWithoutStyle)
       }
@@ -258,7 +239,7 @@ export class Editor {
             tagName,
             rootNode: this.editorNode,
           })
-          const textNodeWithoutStyle = Editor.createTextNode(selectedText)
+          const textNodeWithoutStyle = createTextNode(selectedText)
           const tagNode = this.createStyleNode(tagName)
 
           tagNode.append(notSelectedText)
@@ -289,18 +270,18 @@ export class Editor {
             tagName,
             rootNode: this.editorNode,
           })
-          const textNodeWithoutStyle = Editor.createTextNode(selectedText)
+          const textNodeWithoutStyle = createTextNode(selectedText)
           const tagNode = this.createStyleNode(tagName)
 
           tagNode.append(notSelectedText)
           styleNode.replaceWith(textNodeWithoutStyle, tagNode)
           updatedSelectedNodes.push(textNodeWithoutStyle)
         } else {
-          const italicNode = this.createStyleNode(tagName)
+          const wrapperNode = this.createStyleNode(tagName)
 
-          italicNode.append(selectedText)
-          newSelectedTextNode.replaceWith(italicNode, notSelectedText)
-          updatedSelectedNodes.push(italicNode.firstChild)
+          wrapperNode.append(selectedText)
+          newSelectedTextNode.replaceWith(wrapperNode, notSelectedText)
+          updatedSelectedNodes.push(wrapperNode.firstChild)
         }
       }
     }
@@ -316,7 +297,7 @@ export class Editor {
 
     if (this.isDev) console.log("updatedSelectedNodes: ", updatedSelectedNodes)
 
-    Editor.selectRange({
+    selectRange({
       startNode,
       startOffset: updatedStartOffset,
       endNode,
@@ -333,13 +314,13 @@ export class Editor {
   }
 
   getSelectedTextNodes = () => {
-    const selection = Editor.getSelection()
+    const selection = getSelection()
 
     if (selection.isCollapsed || !selection.rangeCount) {
       return { selectedTextNodes: [] }
     }
 
-    const range = Editor.getRange()
+    const range = getRange()
     const node1 = selection.anchorNode
     const node2 = selection.focusNode
     const selectionAncestor = range.commonAncestorContainer
@@ -416,6 +397,7 @@ export class Editor {
     }
   }
 
+  // Correct selection after odd nodes were filtered out
   correctSelection = ({
     shouldCorrectSelectionStart,
     shouldCorrectSelectionEnd,
@@ -423,20 +405,20 @@ export class Editor {
     range,
   }) => {
     if (shouldCorrectSelectionStart && shouldCorrectSelectionEnd) {
-      Editor.selectRange({
+      selectRange({
         startNode: selectedTextNodes[0],
         endNode: selectedTextNodes[selectedTextNodes.length - 1],
         endOffset:
           selectedTextNodes[selectedTextNodes.length - 1].textContent.length,
       })
     } else if (shouldCorrectSelectionStart) {
-      Editor.selectRange({
+      selectRange({
         startNode: selectedTextNodes[0],
         endNode: range.endContainer,
         endOffset: range.endOffset,
       })
     } else if (shouldCorrectSelectionEnd) {
-      Editor.selectRange({
+      selectRange({
         startNode: range.startContainer,
         startOffset: range.startOffset,
         endNode: selectedTextNodes[selectedTextNodes.length - 1],
@@ -473,9 +455,9 @@ export class Editor {
     node.style.fontWeight = "bold"
 
     if (tagName === "H1") {
-      node.style.fontSize = `${Editor.DEFAULT_FONT_SIZE * 2}px`
+      node.style.fontSize = `${this.defaultFontSize * 2}px`
     } else if (tagName === "H2") {
-      node.style.fontSize = `${Editor.DEFAULT_FONT_SIZE * 1.5}px`
+      node.style.fontSize = `${this.defaultFontSize * 1.5}px`
     }
   }
 }
