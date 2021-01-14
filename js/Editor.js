@@ -172,30 +172,31 @@ export class Editor {
       ).map((parent) => parent.dataset.tag || parent.tagName)
 
       if (textBeforeSelected) {
-        const textNodeWithBeforeSelectedText = createTextNode(textBeforeSelected)
+        const textNodeWithBeforeSelectedText = createTextNode(
+          textBeforeSelected
+        )
         const nodeWithBeforeSelectedText =
           parents.length > 0
             ? parentsTags.reduce((acc, parentTagName) => {
-              const parentNode = this.createStyleNode(parentTagName)
-              parentNode.append(acc)
-              acc = parentNode
-              return acc
-            }, textNodeWithBeforeSelectedText)
+                const parentNode = this.createStyleNode(parentTagName)
+                parentNode.append(acc)
+                acc = parentNode
+                return acc
+              }, textNodeWithBeforeSelectedText)
             : textNodeWithBeforeSelectedText
 
         replaceWithNodes.push(nodeWithBeforeSelectedText)
       }
 
-
       const textNodeWithSelectedText = createTextNode(selectedText)
       const nodeWithSelectedText =
         parentsWithoutStyleNode.length > 0
           ? parentsWithoutStyleNodeTags.reduce((acc, parentTagName) => {
-            const parentNode = this.createStyleNode(parentTagName)
-            parentNode.append(acc)
-            acc = parentNode
-            return acc
-          }, textNodeWithSelectedText)
+              const parentNode = this.createStyleNode(parentTagName)
+              parentNode.append(acc)
+              acc = parentNode
+              return acc
+            }, textNodeWithSelectedText)
           : textNodeWithSelectedText
 
       replaceWithNodes.push(nodeWithSelectedText)
@@ -205,16 +206,15 @@ export class Editor {
         const nodeWithAfterSelectedText =
           parents.length > 0
             ? parentsTags.reduce((acc, parentTagName) => {
-              const parentNode = this.createStyleNode(parentTagName)
-              parentNode.append(acc)
-              acc = parentNode
-              return acc
-            }, textNodeWithAfterSelectedText)
+                const parentNode = this.createStyleNode(parentTagName)
+                parentNode.append(acc)
+                acc = parentNode
+                return acc
+              }, textNodeWithAfterSelectedText)
             : textNodeWithAfterSelectedText
 
         replaceWithNodes.push(nodeWithAfterSelectedText)
       }
-
 
       updatedSelectedNodes.push(textNodeWithSelectedText)
       styleNode.replaceWith(...replaceWithNodes)
@@ -271,13 +271,63 @@ export class Editor {
         if (isFullySelected) {
           if (this.isDev)
             console.log("unstyle: one of multiple nodes is fully selected")
-
-          updatedSelectedNodes.push(
-            ...Array.from(styleNode.childNodes).filter(childNode => selection.containsNode(childNode)).flatMap((childNode) =>
-              getTextNodes(childNode)
-            )
+          const allTextNodes = Array.from(
+            styleNode.childNodes
+          ).flatMap((childNode) => getTextNodes(childNode))
+          const x = allTextNodes.filter((textNode) =>
+            selection.containsNode(textNode)
           )
-          styleNode.replaceWith(...styleNode.childNodes)
+
+          updatedSelectedNodes.push(...x)
+
+          const replaceWithNodes = Array.from(styleNode.childNodes)
+            .flatMap((childNode) => getTextNodes(childNode))
+            .reduce((acc, textNode) => {
+              const parents = getNodeParentsUntil(textNode, styleNode)
+              const parentsTags = Array.from(parents).map(
+                (parent) => parent.dataset.tag || parent.tagName
+              )
+              const parentsWithoutStyleNode = parents.filter(
+                (parent) => parent !== styleNode
+              )
+              const parentsWithoutStyleNodeTags = Array.from(
+                parentsWithoutStyleNode
+              ).map((parent) => parent.dataset.tag || parent.tagName)
+
+              if (selection.containsNode(textNode)) {
+                const nodeWithSelectedText =
+                  parentsWithoutStyleNode.length > 0
+                    ? parentsWithoutStyleNodeTags.reduce(
+                        (acc, parentTagName) => {
+                          const parentNode = this.createStyleNode(parentTagName)
+                          parentNode.append(acc)
+                          acc = parentNode
+                          return acc
+                        },
+                        textNode
+                      )
+                    : textNode
+
+                acc.push(nodeWithSelectedText)
+              } else {
+                const nodeWithNotSelectedText =
+                  parents.length > 0
+                    ? parentsTags.reduce((acc, parentTagName) => {
+                        const parentNode = this.createStyleNode(parentTagName)
+                        parentNode.append(acc)
+                        acc = parentNode
+                        return acc
+                      }, textNode)
+                    : textNode
+
+                acc.push(nodeWithNotSelectedText)
+              }
+
+              return acc
+            }, [])
+
+          // Should wrap nodes that are not in selection in style node so they don't lose their style
+          styleNode.replaceWith(...replaceWithNodes)
         } else {
           const parents = getNodeParentsUntil(selectedTextNode, styleNode)
           const parentsTags = Array.from(parents).map(
