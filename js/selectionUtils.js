@@ -1,9 +1,4 @@
-export function selectRange({
-  startContainer,
-  startOffset = 0,
-  endContainer,
-  endOffset = 1,
-}) {
+export function selectRange({ startContainer, startOffset = 0, endContainer, endOffset = 1 }) {
   const range = createRange()
   const selection = getSelection()
 

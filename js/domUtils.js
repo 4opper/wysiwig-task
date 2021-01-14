@@ -9,10 +9,7 @@ export function getNodesBetween(rootNode, node1, node2) {
   for (let i = 0; i < rootNode.childNodes.length; i++) {
     const currentChild = rootNode.childNodes[i]
 
-    if (
-      isDescendant(currentChild, node1) ||
-      isDescendant(currentChild, node2)
-    ) {
+    if (isDescendant(currentChild, node1) || isDescendant(currentChild, node2)) {
       isBetweenNodes = resultNodes.length === 0
       resultNodes.push(currentChild)
     } else if (isBetweenNodes) {
@@ -23,18 +20,31 @@ export function getNodesBetween(rootNode, node1, node2) {
   return resultNodes
 }
 
-export function getParentNodeWithTag({
-  node,
-  tagName,
-  rootNode,
-  additionalChecks = [],
-}) {
+export function getParentNodeWithTag({ node, tagName, rootNode, additionalChecks = [] }) {
   const nodeParents = getNodeParentsUntil(node, rootNode)
 
   return nodeParents.find(
     (parentNode) =>
-      parentNode.tagName === tagName &&
-      additionalChecks.every((additionalCheck) => additionalCheck(parentNode))
+      parentNode.tagName === tagName && additionalChecks.every((additionalCheck) => additionalCheck(parentNode))
+  )
+}
+
+export function getParentsTags(node, rootParent) {
+  const parentNodes = getNodeParentsUntil(node, rootParent)
+
+  return parentNodes.reduce(
+    (acc, parentNode) => {
+      const tag = parentNode.dataset.tag || parentNode.tagName
+
+      acc.parentsTags.push(tag)
+
+      if (parentNode !== rootParent) {
+        acc.parentsTagsWithoutRoot.push(tag)
+      }
+
+      return acc
+    },
+    { parentsTags: [], parentsTagsWithoutRoot: [] }
   )
 }
 
@@ -65,7 +75,7 @@ export function createTextNode(text) {
   return document.createTextNode(text)
 }
 
-export function getNodeParentsUntil(node, rootNode) {
+function getNodeParentsUntil(node, rootNode) {
   const parentNodes = []
   let currentNode = node
 

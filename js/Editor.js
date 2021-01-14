@@ -1,10 +1,4 @@
-import {
-  createTextNode,
-  getNodeParentsUntil,
-  getNodesBetween,
-  getParentNodeWithTag,
-  getTextNodes,
-} from "./domUtils"
+import { createTextNode, getNodesBetween, getParentNodeWithTag, getParentsTags, getTextNodes } from "./domUtils"
 import { getRange, getSelection, selectRange } from "./selectionUtils"
 
 export class Editor {
@@ -19,8 +13,7 @@ export class Editor {
 
     document.querySelector(".js-toolkit").addEventListener("click", (e) => {
       if (e.target !== e.currentTarget) {
-        const buttonNode =
-          e.target.tagName === "BUTTON" ? e.target : e.target.parentNode
+        const buttonNode = e.target.tagName === "BUTTON" ? e.target : e.target.parentNode
         const wrapperTagName = buttonNode.dataset.tag
 
         this.handleActionClick(wrapperTagName)
@@ -152,66 +145,25 @@ export class Editor {
     if (isSelectionAlreadyWrapped) {
       if (this.isDev) console.log("unstyle: single text node")
 
-      const textBeforeSelected = selectedTextNode.data.slice(
-        0,
-        range.startOffset
-      )
-      const textAfterSelected = selectedTextNode.data.slice(
-        range.endOffset,
-        selectedTextNode.length
-      )
-      const parents = getNodeParentsUntil(selectedTextNode, styleNode)
-      const parentsTags = Array.from(parents).map(
-        (parent) => parent.dataset.tag || parent.tagName
-      )
-      const parentsWithoutStyleNode = parents.filter(
-        (parent) => parent !== styleNode
-      )
-      const parentsWithoutStyleNodeTags = Array.from(
-        parentsWithoutStyleNode
-      ).map((parent) => parent.dataset.tag || parent.tagName)
+      const textBeforeSelected = selectedTextNode.data.slice(0, range.startOffset)
+      const textAfterSelected = selectedTextNode.data.slice(range.endOffset, selectedTextNode.length)
+      const { parentsTags, parentsTagsWithoutRoot } = getParentsTags(selectedTextNode, styleNode)
 
       if (textBeforeSelected) {
-        const textNodeWithBeforeSelectedText = createTextNode(
-          textBeforeSelected
-        )
-        const nodeWithBeforeSelectedText =
-          parents.length > 0
-            ? parentsTags.reduce((acc, parentTagName) => {
-                const parentNode = this.createStyleNode(parentTagName)
-                parentNode.append(acc)
-                acc = parentNode
-                return acc
-              }, textNodeWithBeforeSelectedText)
-            : textNodeWithBeforeSelectedText
+        const textNodeWithBeforeSelectedText = createTextNode(textBeforeSelected)
+        const nodeWithBeforeSelectedText = this.restoreTextNodeStyles(textNodeWithBeforeSelectedText, parentsTags)
 
         replaceWithNodes.push(nodeWithBeforeSelectedText)
       }
 
       const textNodeWithSelectedText = createTextNode(selectedText)
-      const nodeWithSelectedText =
-        parentsWithoutStyleNode.length > 0
-          ? parentsWithoutStyleNodeTags.reduce((acc, parentTagName) => {
-              const parentNode = this.createStyleNode(parentTagName)
-              parentNode.append(acc)
-              acc = parentNode
-              return acc
-            }, textNodeWithSelectedText)
-          : textNodeWithSelectedText
+      const nodeWithSelectedText = this.restoreTextNodeStyles(textNodeWithSelectedText, parentsTagsWithoutRoot)
 
       replaceWithNodes.push(nodeWithSelectedText)
 
       if (textAfterSelected) {
         const textNodeWithAfterSelectedText = createTextNode(textAfterSelected)
-        const nodeWithAfterSelectedText =
-          parents.length > 0
-            ? parentsTags.reduce((acc, parentTagName) => {
-                const parentNode = this.createStyleNode(parentTagName)
-                parentNode.append(acc)
-                acc = parentNode
-                return acc
-              }, textNodeWithAfterSelectedText)
-            : textNodeWithAfterSelectedText
+        const nodeWithAfterSelectedText = this.restoreTextNodeStyles(textNodeWithAfterSelectedText, parentsTags)
 
         replaceWithNodes.push(nodeWithAfterSelectedText)
       }
@@ -221,14 +173,8 @@ export class Editor {
     } else {
       if (this.isDev) console.log("single text node")
 
-      const textBeforeSelected = selectedTextNode.data.slice(
-        0,
-        range.startOffset
-      )
-      const textAfterSelected = selectedTextNode.data.slice(
-        range.endOffset,
-        selectedTextNode.length
-      )
+      const textBeforeSelected = selectedTextNode.data.slice(0, range.startOffset)
+      const textAfterSelected = selectedTextNode.data.slice(range.endOffset, selectedTextNode.length)
       const wrapperNode = this.createStyleNode(tagName)
 
       if (textBeforeSelected) replaceWithNodes.push(textBeforeSelected)
@@ -252,8 +198,7 @@ export class Editor {
     const { startOffset, endOffset, endContainer } = range
     const selection = getSelection()
     const isFirstNode = selectedTextNode === selectedTextNodes[0]
-    const isLastNode =
-      selectedTextNode === selectedTextNodes[selectedTextNodes.length - 1]
+    const isLastNode = selectedTextNode === selectedTextNodes[selectedTextNodes.length - 1]
     const isFullySelected =
       (isFirstNode && startOffset === 0) ||
       (isLastNode && endOffset === endContainer.length) ||
@@ -269,56 +214,23 @@ export class Editor {
       // As we use childNodes in some iteration after the first one it's possible that styleNode is already replaced
       if (styleNode) {
         if (isFullySelected) {
-          if (this.isDev)
-            console.log("unstyle: one of multiple nodes is fully selected")
-          const allTextNodes = Array.from(
-            styleNode.childNodes
-          ).flatMap((childNode) => getTextNodes(childNode))
-          const x = allTextNodes.filter((textNode) =>
-            selection.containsNode(textNode)
-          )
+          if (this.isDev) console.log("unstyle: one of multiple nodes is fully selected")
+          const styleNodeTextNodes = Array.from(styleNode.childNodes).flatMap((childNode) => getTextNodes(childNode))
+          const onlySelectedTextNodes = styleNodeTextNodes.filter((textNode) => selection.containsNode(textNode))
 
-          updatedSelectedNodes.push(...x)
+          updatedSelectedNodes.push(...onlySelectedTextNodes)
 
           const replaceWithNodes = Array.from(styleNode.childNodes)
             .flatMap((childNode) => getTextNodes(childNode))
             .reduce((acc, textNode) => {
-              const parents = getNodeParentsUntil(textNode, styleNode)
-              const parentsTags = Array.from(parents).map(
-                (parent) => parent.dataset.tag || parent.tagName
-              )
-              const parentsWithoutStyleNode = parents.filter(
-                (parent) => parent !== styleNode
-              )
-              const parentsWithoutStyleNodeTags = Array.from(
-                parentsWithoutStyleNode
-              ).map((parent) => parent.dataset.tag || parent.tagName)
+              const { parentsTags, parentsTagsWithoutRoot } = getParentsTags(textNode, styleNode)
 
               if (selection.containsNode(textNode)) {
-                const nodeWithSelectedText =
-                  parentsWithoutStyleNode.length > 0
-                    ? parentsWithoutStyleNodeTags.reduce(
-                        (acc, parentTagName) => {
-                          const parentNode = this.createStyleNode(parentTagName)
-                          parentNode.append(acc)
-                          acc = parentNode
-                          return acc
-                        },
-                        textNode
-                      )
-                    : textNode
+                const nodeWithSelectedText = this.restoreTextNodeStyles(textNode, parentsTagsWithoutRoot)
 
                 acc.push(nodeWithSelectedText)
               } else {
-                const nodeWithNotSelectedText =
-                  parents.length > 0
-                    ? parentsTags.reduce((acc, parentTagName) => {
-                        const parentNode = this.createStyleNode(parentTagName)
-                        parentNode.append(acc)
-                        acc = parentNode
-                        return acc
-                      }, textNode)
-                    : textNode
+                const nodeWithNotSelectedText = this.restoreTextNodeStyles(textNode, parentsTags)
 
                 acc.push(nodeWithNotSelectedText)
               }
@@ -329,82 +241,31 @@ export class Editor {
           // Should wrap nodes that are not in selection in style node so they don't lose their style
           styleNode.replaceWith(...replaceWithNodes)
         } else {
-          const parents = getNodeParentsUntil(selectedTextNode, styleNode)
-          const parentsTags = Array.from(parents).map(
-            (parent) => parent.dataset.tag || parent.tagName
-          )
-          const parentsWithoutStyleNode = parents.filter(
-            (parent) => parent !== styleNode
-          )
-          const parentsWithoutStyleNodeTags = Array.from(
-            parentsWithoutStyleNode
-          ).map((parent) => parent.dataset.tag || parent.tagName)
+          const { parentsTags, parentsTagsWithoutRoot } = getParentsTags(selectedTextNode, styleNode)
 
           if (isFirstNode) {
-            if (this.isDev)
-              console.log(
-                "unstyle: first of multiple nodes is not fully selected"
-              )
+            if (this.isDev) console.log("unstyle: first of multiple nodes is not fully selected")
 
             const notSelectedText = selectedTextNode.data.slice(0, startOffset)
-            const selectedText = selectedTextNode.data.slice(
-              startOffset,
-              selectedTextNode.length
-            )
+            const selectedText = selectedTextNode.data.slice(startOffset, selectedTextNode.length)
             const textNodeWithSelectedText = createTextNode(selectedText)
-            const nodeWithSelectedText =
-              parentsWithoutStyleNode.length > 0
-                ? parentsWithoutStyleNodeTags.reduce((acc, parentTagName) => {
-                    const parentNode = this.createStyleNode(parentTagName)
-                    parentNode.append(acc)
-                    acc = parentNode
-                    return acc
-                  }, textNodeWithSelectedText)
-                : textNodeWithSelectedText
-            const nodeWithNotSelectedText =
-              parents.length > 0
-                ? parentsTags.reduce((acc, parentTagName) => {
-                    const parentNode = this.createStyleNode(parentTagName)
-                    parentNode.append(acc)
-                    acc = parentNode
-                    return acc
-                  }, createTextNode(notSelectedText))
-                : createTextNode(notSelectedText)
+            const nodeWithSelectedText = this.restoreTextNodeStyles(textNodeWithSelectedText, parentsTagsWithoutRoot)
+            const textNodeWithNotSelectedText = createTextNode(notSelectedText)
+            const nodeWithNotSelectedText = this.restoreTextNodeStyles(textNodeWithNotSelectedText, parentsTags)
 
             styleNode.replaceWith(nodeWithNotSelectedText, nodeWithSelectedText)
             updatedSelectedNodes.push(textNodeWithSelectedText)
           }
 
           if (isLastNode) {
-            if (this.isDev)
-              console.log(
-                "unstyle: last of multiple nodes is not fully selected"
-              )
+            if (this.isDev) console.log("unstyle: last of multiple nodes is not fully selected")
 
             const selectedText = selectedTextNode.data.slice(0, endOffset)
-            const notSelectedText = selectedTextNode.data.slice(
-              endOffset,
-              selectedTextNode.length
-            )
+            const notSelectedText = selectedTextNode.data.slice(endOffset, selectedTextNode.length)
             const textNodeWithSelectedText = createTextNode(selectedText)
-            const nodeWithSelectedText =
-              parentsWithoutStyleNode.length > 0
-                ? parentsWithoutStyleNodeTags.reduce((acc, parentTagName) => {
-                    const parentNode = this.createStyleNode(parentTagName)
-                    parentNode.append(acc)
-                    acc = parentNode
-                    return acc
-                  }, textNodeWithSelectedText)
-                : textNodeWithSelectedText
-            const nodeWithNotSelectedText =
-              parents.length > 0
-                ? parentsTags.reduce((acc, parentTagName) => {
-                    const parentNode = this.createStyleNode(parentTagName)
-                    parentNode.append(acc)
-                    acc = parentNode
-                    return acc
-                  }, createTextNode(notSelectedText))
-                : createTextNode(notSelectedText)
+            const nodeWithSelectedText = this.restoreTextNodeStyles(textNodeWithSelectedText, parentsTagsWithoutRoot)
+            const textNodeWithNotSelectedText = createTextNode(notSelectedText)
+            const nodeWithNotSelectedText = this.restoreTextNodeStyles(textNodeWithNotSelectedText, parentsTags)
 
             styleNode.replaceWith(nodeWithSelectedText, nodeWithNotSelectedText)
             updatedSelectedNodes.push(textNodeWithSelectedText)
@@ -423,14 +284,10 @@ export class Editor {
         updatedSelectedNodes.push(wrapperNode.firstChild)
       } else {
         if (isFirstNode) {
-          if (this.isDev)
-            console.log("first of multiple nodes is not fully selected")
+          if (this.isDev) console.log("first of multiple nodes is not fully selected")
 
           const notSelectedText = selectedTextNode.data.slice(0, startOffset)
-          const selectedText = selectedTextNode.data.slice(
-            startOffset,
-            selectedTextNode.length
-          )
+          const selectedText = selectedTextNode.data.slice(startOffset, selectedTextNode.length)
           const wrapperNode = this.createStyleNode(tagName)
 
           wrapperNode.append(selectedText)
@@ -439,14 +296,10 @@ export class Editor {
         }
 
         if (isLastNode) {
-          if (this.isDev)
-            console.log("last of multiple nodes is not fully selected")
+          if (this.isDev) console.log("last of multiple nodes is not fully selected")
 
           const selectedText = selectedTextNode.data.slice(0, endOffset)
-          const notSelectedText = selectedTextNode.data.slice(
-            endOffset,
-            selectedTextNode.length
-          )
+          const notSelectedText = selectedTextNode.data.slice(endOffset, selectedTextNode.length)
           const wrapperNode = this.createStyleNode(tagName)
 
           wrapperNode.append(selectedText)
@@ -457,11 +310,7 @@ export class Editor {
     }
   }
 
-  updateSelection = ({
-    updatedSelectedNodes,
-    updatedStartOffset,
-    updatedEndOffset,
-  }) => {
+  updateSelection = ({ updatedSelectedNodes, updatedStartOffset, updatedEndOffset }) => {
     const startNode = updatedSelectedNodes[0]
     const endNode = updatedSelectedNodes[updatedSelectedNodes.length - 1]
 
@@ -524,41 +373,52 @@ export class Editor {
     return selectedTextNodes
   }
 
+  restoreTextNodeStyles = (textNode, tags) => {
+    if (tags.length <= 0) {
+      return textNode
+    }
+
+    return tags.reduce((acc, parentTagName) => {
+      const parentNode = this.createStyleNode(parentTagName)
+      parentNode.append(acc)
+      acc = parentNode
+      return acc
+    }, textNode)
+  }
+
   // Filters out selected nodes that don't have any selected chars - happens when
   // empty nodes or nodes selected before very beginning of node or after the very end of node
   correctSelectedNodes = ({ selectedNodes, range }) => {
     let shouldCorrectSelectionStart = false
     let shouldCorrectSelectionEnd = false
 
-    const correctedSelectedNodes = selectedNodes.filter(
-      (selectedNode, index) => {
-        if (index === 0) {
-          const result = range.startOffset < selectedNode.textContent.length
+    const correctedSelectedNodes = selectedNodes.filter((selectedNode, index) => {
+      if (index === 0) {
+        const result = range.startOffset < selectedNode.textContent.length
 
-          if (!result) {
-            if (this.isDev) console.log("update start")
+        if (!result) {
+          if (this.isDev) console.log("update start")
 
-            shouldCorrectSelectionStart = true
-          }
-
-          return result
+          shouldCorrectSelectionStart = true
         }
 
-        if (index === selectedNodes.length - 1) {
-          const result = range.endOffset > 0
-
-          if (!result) {
-            if (this.isDev) console.log("update end")
-
-            shouldCorrectSelectionEnd = true
-          }
-
-          return result
-        }
-
-        return true
+        return result
       }
-    )
+
+      if (index === selectedNodes.length - 1) {
+        const result = range.endOffset > 0
+
+        if (!result) {
+          if (this.isDev) console.log("update end")
+
+          shouldCorrectSelectionEnd = true
+        }
+
+        return result
+      }
+
+      return true
+    })
 
     return {
       correctedSelectedNodes,
@@ -568,18 +428,12 @@ export class Editor {
   }
 
   // Correct selection after odd nodes were filtered out
-  correctSelection = ({
-    shouldCorrectSelectionStart,
-    shouldCorrectSelectionEnd,
-    selectedTextNodes,
-    range,
-  }) => {
+  correctSelection = ({ shouldCorrectSelectionStart, shouldCorrectSelectionEnd, selectedTextNodes, range }) => {
     if (shouldCorrectSelectionStart && shouldCorrectSelectionEnd) {
       selectRange({
         startContainer: selectedTextNodes[0],
         endNode: selectedTextNodes[selectedTextNodes.length - 1],
-        endOffset:
-          selectedTextNodes[selectedTextNodes.length - 1].textContent.length,
+        endOffset: selectedTextNodes[selectedTextNodes.length - 1].textContent.length,
       })
     } else if (shouldCorrectSelectionStart) {
       selectRange({
@@ -592,8 +446,7 @@ export class Editor {
         startContainer: range.startContainer,
         startOffset: range.startOffset,
         endContainer: selectedTextNodes[selectedTextNodes.length - 1],
-        endOffset:
-          selectedTextNodes[selectedTextNodes.length - 1].textContent.length,
+        endOffset: selectedTextNodes[selectedTextNodes.length - 1].textContent.length,
       })
     }
   }
@@ -601,11 +454,7 @@ export class Editor {
   getSelectedTextNodesFrom = ({ correctedSelectedNodes, selection }) => {
     return correctedSelectedNodes.reduce((acc, selectedNode) => {
       // Have to filter text nodes to handle case when selectedNode contains multiple textNodes and not all of them are selected
-      acc.push(
-        ...getTextNodes(selectedNode).filter((textNode) =>
-          selection.containsNode(textNode)
-        )
-      )
+      acc.push(...getTextNodes(selectedNode).filter((textNode) => selection.containsNode(textNode)))
       return acc
     }, [])
   }
