@@ -1,8 +1,6 @@
-// TODO fix removing headings
-// TODO test very well
-// TODO test in different browsers
 import {
   createTextNode,
+  getNodeParentsUntil,
   getNodesBetween,
   getParentNodeWithTag,
   getTextNodes,
@@ -127,7 +125,6 @@ export class Editor {
     }
   }
 
-  // TODO fix h1 -> h2 -> remove h1 = loose all styles
   handleSingleTextNodeSelected = ({
     isSelectionAlreadyWrapped,
     updatedSelectedNodes,
@@ -135,8 +132,6 @@ export class Editor {
     range,
     tagName,
   }) => {
-    if (this.isDev) console.log("single text node")
-
     const styleNode = this.getParentNodeWithTag({
       node: selectedTextNode,
       tagName,
@@ -146,10 +141,19 @@ export class Editor {
     const selectedText = range.toString()
 
     if (isSelectionAlreadyWrapped) {
-      updatedSelectedNodes.push(...Array.from(styleNode.childNodes).map(getTextNodes).flat())
+      if (this.isDev) console.log("unstyle: single text node")
+
+      updatedSelectedNodes.push(
+        ...Array.from(styleNode.childNodes).map(getTextNodes).flat()
+      )
       styleNode.replaceWith(...styleNode.childNodes)
     } else {
-      const textBeforeSelected = selectedTextNode.data.slice(0, range.startOffset)
+      if (this.isDev) console.log("single text node")
+
+      const textBeforeSelected = selectedTextNode.data.slice(
+        0,
+        range.startOffset
+      )
       const textAfterSelected = selectedTextNode.data.slice(
         range.endOffset,
         selectedTextNode.length
@@ -166,7 +170,6 @@ export class Editor {
     }
   }
 
-  // TODO fix 6 chars -> italic 2 middle -> italic 2-3 -> try remove
   handleMultipleTextNodesSelected = ({
     isSelectionAlreadyWrapped,
     updatedSelectedNodes,
@@ -175,7 +178,18 @@ export class Editor {
     tagName,
     selectedTextNodes,
   }) => {
+    const { startOffset, endOffset, endContainer } = range
+    const isFirstNode = selectedTextNode === selectedTextNodes[0]
+    const isLastNode =
+      selectedTextNode === selectedTextNodes[selectedTextNodes.length - 1]
+    const isFullySelected =
+      (isFirstNode && startOffset === 0) ||
+      (isLastNode && endOffset === endContainer.length) ||
+      (!isFirstNode && !isLastNode)
+
     if (isSelectionAlreadyWrapped) {
+      if (this.isDev) console.log("unstyle: for one of multiple text nodes")
+
       const styleNode = this.getParentNodeWithTag({
         node: selectedTextNode,
         tagName,
@@ -184,20 +198,97 @@ export class Editor {
 
       // As we use childNodes in some iteration after the first one it's possible that styleNode is already replaced
       if (styleNode) {
-        updatedSelectedNodes.push(...styleNode.childNodes)
-        styleNode.replaceWith(...styleNode.childNodes)
+        if (isFullySelected) {
+          if (this.isDev)
+            console.log("unstyle: one of multiple nodes is fully selected")
+
+          updatedSelectedNodes.push(...styleNode.childNodes)
+          styleNode.replaceWith(...styleNode.childNodes)
+        } else {
+          const parents = getNodeParentsUntil(selectedTextNode, styleNode)
+          const parentsTags = Array.from(parents).map(
+            (parent) => parent.tagName
+          )
+          const parentsWithoutStyleNode = parents.filter(
+            (parent) => parent !== styleNode
+          )
+          const parentsWithoutStyleNodeTags = Array.from(
+            parentsWithoutStyleNode
+          ).map((parent) => parent.tagName)
+
+          if (isFirstNode) {
+            if (this.isDev)
+              console.log(
+                "unstyle: first of multiple nodes is not fully selected"
+              )
+
+            const notSelectedText = selectedTextNode.data.slice(0, startOffset)
+            const selectedText = selectedTextNode.data.slice(
+              startOffset,
+              selectedTextNode.length
+            )
+            const textNodeWithSelectedText = createTextNode(selectedText)
+            const nodeWithSelectedText =
+              parentsWithoutStyleNode.length > 0
+                ? parentsWithoutStyleNodeTags.reduce((acc, parentTagName) => {
+                    const parentNode = this.createStyleNode(parentTagName)
+                    parentNode.append(acc)
+                    acc = parentNode
+                    return acc
+                  }, textNodeWithSelectedText)
+                : textNodeWithSelectedText
+            const nodeWithNotSelectedText =
+              parents.length > 0
+                ? parentsTags.reduce((acc, parentTagName) => {
+                    const parentNode = this.createStyleNode(parentTagName)
+                    parentNode.append(acc)
+                    acc = parentNode
+                    return acc
+                  }, createTextNode(notSelectedText))
+                : createTextNode(notSelectedText)
+
+            styleNode.replaceWith(nodeWithNotSelectedText, nodeWithSelectedText)
+            updatedSelectedNodes.push(textNodeWithSelectedText)
+          }
+
+          if (isLastNode) {
+            if (this.isDev)
+              console.log(
+                "unstyle: last of multiple nodes is not fully selected"
+              )
+
+            const selectedText = selectedTextNode.data.slice(0, endOffset)
+            const notSelectedText = selectedTextNode.data.slice(
+              endOffset,
+              selectedTextNode.length
+            )
+            const textNodeWithSelectedText = createTextNode(selectedText)
+            const nodeWithSelectedText =
+              parentsWithoutStyleNode.length > 0
+                ? parentsWithoutStyleNodeTags.reduce((acc, parentTagName) => {
+                    const parentNode = this.createStyleNode(parentTagName)
+                    parentNode.append(acc)
+                    acc = parentNode
+                    return acc
+                  }, textNodeWithSelectedText)
+                : textNodeWithSelectedText
+            const nodeWithNotSelectedText =
+              parents.length > 0
+                ? parentsTags.reduce((acc, parentTagName) => {
+                    const parentNode = this.createStyleNode(parentTagName)
+                    parentNode.append(acc)
+                    acc = parentNode
+                    return acc
+                  }, createTextNode(notSelectedText))
+                : createTextNode(notSelectedText)
+
+            styleNode.replaceWith(nodeWithSelectedText, nodeWithNotSelectedText)
+            updatedSelectedNodes.push(textNodeWithSelectedText)
+          }
+        }
       }
     } else {
-      const { startOffset, endOffset, endContainer } = range
-      const isFirstNode = selectedTextNode === selectedTextNodes[0]
-      const isLastNode =
-        selectedTextNode === selectedTextNodes[selectedTextNodes.length - 1]
-
-      if (
-        (isFirstNode && startOffset === 0) ||
-        (isLastNode && endOffset === endContainer.length) ||
-        (!isFirstNode && !isLastNode)
-      ) {
+      if (isFullySelected) {
         if (this.isDev) console.log("one of multiple nodes is fully selected")
 
         const wrapperNode = this.createStyleNode(tagName)
