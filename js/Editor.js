@@ -188,8 +188,6 @@ export class Editor {
       (!isFirstNode && !isLastNode)
 
     if (isSelectionAlreadyWrapped) {
-      if (this.isDev) console.log("unstyle: for one of multiple text nodes")
-
       const styleNode = this.getParentNodeWithTag({
         node: selectedTextNode,
         tagName,
@@ -202,7 +200,11 @@ export class Editor {
           if (this.isDev)
             console.log("unstyle: one of multiple nodes is fully selected")
 
-          updatedSelectedNodes.push(...styleNode.childNodes)
+          updatedSelectedNodes.push(
+            ...Array.from(styleNode.childNodes).flatMap((childNode) =>
+              getTextNodes(childNode)
+            )
+          )
           styleNode.replaceWith(...styleNode.childNodes)
         } else {
           const parents = getNodeParentsUntil(selectedTextNode, styleNode)
