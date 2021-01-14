@@ -250,6 +250,7 @@ export class Editor {
     selectedTextNodes,
   }) => {
     const { startOffset, endOffset, endContainer } = range
+    const selection = getSelection()
     const isFirstNode = selectedTextNode === selectedTextNodes[0]
     const isLastNode =
       selectedTextNode === selectedTextNodes[selectedTextNodes.length - 1]
@@ -272,7 +273,7 @@ export class Editor {
             console.log("unstyle: one of multiple nodes is fully selected")
 
           updatedSelectedNodes.push(
-            ...Array.from(styleNode.childNodes).flatMap((childNode) =>
+            ...Array.from(styleNode.childNodes).filter(childNode => selection.containsNode(childNode)).flatMap((childNode) =>
               getTextNodes(childNode)
             )
           )
