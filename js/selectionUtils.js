@@ -1,15 +1,15 @@
 export function selectRange({
-  startNode,
+  startContainer,
   startOffset = 0,
-  endNode,
+  endContainer,
   endOffset = 1,
 }) {
   const range = createRange()
   const selection = getSelection()
 
   selection.removeAllRanges()
-  range.setStart(startNode, startOffset)
-  range.setEnd(endNode, endOffset)
+  range.setStart(startContainer, startOffset)
+  range.setEnd(endContainer, endOffset)
   selection.addRange(range)
 }
 

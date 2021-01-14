@@ -49,10 +49,19 @@ export class Editor {
     const range = getRange()
 
     if (!range) {
+      if (this.isDev) console.log("no range")
+
       return
     }
 
     const { startOffset, endOffset, collapsed } = range
+
+    if (!selectedTextNodes.length) {
+      if (this.isDev) console.log("no selected text")
+
+      return
+    }
+
     const updatedSelectedNodes = []
     const isSelectionAlreadyWrapped = selectedTextNodes.every((textNode) =>
       this.getParentNodeWithTag({
@@ -407,9 +416,9 @@ export class Editor {
     if (this.isDev) console.log("updatedSelectedNodes: ", updatedSelectedNodes)
 
     selectRange({
-      startNode,
+      startContainer: startNode,
       startOffset: updatedStartOffset,
-      endNode,
+      endContainer: endNode,
       endOffset: updatedEndOffset || endNode.textContent.length || 1,
     })
   }
@@ -426,7 +435,7 @@ export class Editor {
     const selection = getSelection()
 
     if (selection.isCollapsed || !selection.rangeCount) {
-      return { selectedTextNodes: [] }
+      return []
     }
 
     const range = getRange()
@@ -435,7 +444,7 @@ export class Editor {
     const selectionAncestor = range.commonAncestorContainer
 
     if (selectionAncestor == null) {
-      return { selectedTextNodes: [] }
+      return []
     }
 
     const selectedNodes = getNodesBetween(selectionAncestor, node1, node2)
@@ -515,22 +524,22 @@ export class Editor {
   }) => {
     if (shouldCorrectSelectionStart && shouldCorrectSelectionEnd) {
       selectRange({
-        startNode: selectedTextNodes[0],
+        startContainer: selectedTextNodes[0],
         endNode: selectedTextNodes[selectedTextNodes.length - 1],
         endOffset:
           selectedTextNodes[selectedTextNodes.length - 1].textContent.length,
       })
     } else if (shouldCorrectSelectionStart) {
       selectRange({
-        startNode: selectedTextNodes[0],
-        endNode: range.endContainer,
+        startContainer: selectedTextNodes[0],
+        endContainer: range.endContainer,
         endOffset: range.endOffset,
       })
     } else if (shouldCorrectSelectionEnd) {
       selectRange({
-        startNode: range.startContainer,
+        startContainer: range.startContainer,
         startOffset: range.startOffset,
-        endNode: selectedTextNodes[selectedTextNodes.length - 1],
+        endContainer: selectedTextNodes[selectedTextNodes.length - 1],
         endOffset:
           selectedTextNodes[selectedTextNodes.length - 1].textContent.length,
       })
