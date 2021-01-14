@@ -151,6 +151,7 @@ export class Editor {
 
     if (isSelectionAlreadyWrapped) {
       if (this.isDev) console.log("unstyle: single text node")
+
       const textBeforeSelected = selectedTextNode.data.slice(
         0,
         range.startOffset
@@ -161,14 +162,14 @@ export class Editor {
       )
       const parents = getNodeParentsUntil(selectedTextNode, styleNode)
       const parentsTags = Array.from(parents).map(
-        (parent) => parent.tagName
+        (parent) => parent.dataset.tag || parent.tagName
       )
       const parentsWithoutStyleNode = parents.filter(
         (parent) => parent !== styleNode
       )
       const parentsWithoutStyleNodeTags = Array.from(
         parentsWithoutStyleNode
-      ).map((parent) => parent.tagName)
+      ).map((parent) => parent.dataset.tag || parent.tagName)
 
       if (textBeforeSelected) {
         const textNodeWithBeforeSelectedText = createTextNode(textBeforeSelected)
@@ -279,14 +280,14 @@ export class Editor {
         } else {
           const parents = getNodeParentsUntil(selectedTextNode, styleNode)
           const parentsTags = Array.from(parents).map(
-            (parent) => parent.tagName
+            (parent) => parent.dataset.tag || parent.tagName
           )
           const parentsWithoutStyleNode = parents.filter(
             (parent) => parent !== styleNode
           )
           const parentsWithoutStyleNodeTags = Array.from(
             parentsWithoutStyleNode
-          ).map((parent) => parent.tagName)
+          ).map((parent) => parent.dataset.tag || parent.tagName)
 
           if (isFirstNode) {
             if (this.isDev)
