@@ -1,5 +1,13 @@
 # Тестовое задание
 
+## How to check
+
+1) Run
+```
+npm i && npm run dev
+```
+2) Visit [http://localhost:1234/](http://localhost:1234/)
+
 ## Задача
 
 Написать логику для [WYSIWYG](https://ru.wikipedia.org/wiki/WYSIWYG), который имеет из функциональности:
