@@ -5,7 +5,7 @@ init()
 function init() {
   window.addEventListener("DOMContentLoaded", () => {
     const editorNode = document.querySelector(".edit-area")
-    const editor = new Editor({ editorNode, isDev: false })
+    const editor = new Editor({ editorNode, isDev: true })
 
     editor.init()
   })

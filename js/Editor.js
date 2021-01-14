@@ -52,7 +52,7 @@ export class Editor {
       return
     }
 
-    const { endOffset, collapsed } = range
+    const { startOffset, endOffset, collapsed } = range
     const updatedSelectedNodes = []
     const isSelectionAlreadyWrapped = selectedTextNodes.every((textNode) =>
       this.getParentNodeWithTag({
@@ -78,7 +78,7 @@ export class Editor {
           if (this.isDev) console.log("whole node is already wrapped")
 
           if (selectedNodeIndex === 0) {
-            updatedStartOffset = endOffset
+            updatedStartOffset = startOffset
           }
 
           if (selectedNodeIndex === selectedTextNodes.length - 1) {
@@ -142,11 +142,72 @@ export class Editor {
 
     if (isSelectionAlreadyWrapped) {
       if (this.isDev) console.log("unstyle: single text node")
-
-      updatedSelectedNodes.push(
-        ...Array.from(styleNode.childNodes).map(getTextNodes).flat()
+      const textBeforeSelected = selectedTextNode.data.slice(
+        0,
+        range.startOffset
       )
-      styleNode.replaceWith(...styleNode.childNodes)
+      const textAfterSelected = selectedTextNode.data.slice(
+        range.endOffset,
+        selectedTextNode.length
+      )
+      const parents = getNodeParentsUntil(selectedTextNode, styleNode)
+      const parentsTags = Array.from(parents).map(
+        (parent) => parent.tagName
+      )
+      const parentsWithoutStyleNode = parents.filter(
+        (parent) => parent !== styleNode
+      )
+      const parentsWithoutStyleNodeTags = Array.from(
+        parentsWithoutStyleNode
+      ).map((parent) => parent.tagName)
+
+      if (textBeforeSelected) {
+        const textNodeWithBeforeSelectedText = createTextNode(textBeforeSelected)
+        const nodeWithBeforeSelectedText =
+          parents.length > 0
+            ? parentsTags.reduce((acc, parentTagName) => {
+              const parentNode = this.createStyleNode(parentTagName)
+              parentNode.append(acc)
+              acc = parentNode
+              return acc
+            }, textNodeWithBeforeSelectedText)
+            : textNodeWithBeforeSelectedText
+
+        replaceWithNodes.push(nodeWithBeforeSelectedText)
+      }
+
+
+      const textNodeWithSelectedText = createTextNode(selectedText)
+      const nodeWithSelectedText =
+        parentsWithoutStyleNode.length > 0
+          ? parentsWithoutStyleNodeTags.reduce((acc, parentTagName) => {
+            const parentNode = this.createStyleNode(parentTagName)
+            parentNode.append(acc)
+            acc = parentNode
+            return acc
+          }, textNodeWithSelectedText)
+          : textNodeWithSelectedText
+
+      replaceWithNodes.push(nodeWithSelectedText)
+
+      if (textAfterSelected) {
+        const textNodeWithAfterSelectedText = createTextNode(textAfterSelected)
+        const nodeWithAfterSelectedText =
+          parents.length > 0
+            ? parentsTags.reduce((acc, parentTagName) => {
+              const parentNode = this.createStyleNode(parentTagName)
+              parentNode.append(acc)
+              acc = parentNode
+              return acc
+            }, textNodeWithAfterSelectedText)
+            : textNodeWithAfterSelectedText
+
+        replaceWithNodes.push(nodeWithAfterSelectedText)
+      }
+
+
+      updatedSelectedNodes.push(textNodeWithSelectedText)
+      styleNode.replaceWith(...replaceWithNodes)
     } else {
       if (this.isDev) console.log("single text node")
 
