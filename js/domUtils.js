@@ -75,14 +75,6 @@ export function getRootFontSize() {
   return { value, units }
 }
 
-function isDescendant(parent, child) {
-  return parent.contains(child)
-}
-
-export function createTextNode(text) {
-  return document.createTextNode(text)
-}
-
 function getNodeParentsUntil(node, rootNode) {
   const parentNodes = []
   let currentNode = node
@@ -94,4 +86,12 @@ function getNodeParentsUntil(node, rootNode) {
   }
 
   return parentNodes
+}
+
+function isDescendant(parent, child) {
+  return parent.contains(child)
+}
+
+export function createTextNode(text) {
+  return document.createTextNode(text)
 }

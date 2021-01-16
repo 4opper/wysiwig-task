@@ -191,14 +191,15 @@ export class Editor {
       const textBeforeSelected = selectedTextNode.data.slice(0, range.startOffset)
       const textAfterSelected = selectedTextNode.data.slice(range.endOffset, selectedTextNode.length)
       const wrapperNode = this.createStyleNode(tagName)
+      const textNodeWithSelectedText = createTextNode(selectedText)
 
       if (textBeforeSelected) replaceWithNodes.push(textBeforeSelected)
       if (selectedText) replaceWithNodes.push(wrapperNode)
       if (textAfterSelected) replaceWithNodes.push(textAfterSelected)
 
-      wrapperNode.append(selectedText)
+      wrapperNode.append(textNodeWithSelectedText)
       selectedTextNode.replaceWith(...replaceWithNodes)
-      updatedSelectedNodes.push(wrapperNode.firstChild)
+      updatedSelectedNodes.push(textNodeWithSelectedText)
     }
   }
 
@@ -206,7 +207,7 @@ export class Editor {
     const iterate = (node) => {
       if (node.nodeType !== 3) {
         if (node.dataset.tag) {
-          this.addStylesForHeading(node, node.dataset.tag, true)
+          this.addStyles(node, node.dataset.tag, true)
         }
 
         if (node.childNodes) {
@@ -331,7 +332,7 @@ export class Editor {
 
         wrapperNode.append(clonedNode)
         selectedTextNode.replaceWith(wrapperNode)
-        updatedSelectedNodes.push(wrapperNode.firstChild)
+        updatedSelectedNodes.push(clonedNode)
       } else {
         if (isFirstNode) {
           if (this.isDev) console.log("first of multiple nodes is not fully selected")
@@ -339,10 +340,11 @@ export class Editor {
           const notSelectedText = selectedTextNode.data.slice(0, startOffset)
           const selectedText = selectedTextNode.data.slice(startOffset, selectedTextNode.length)
           const wrapperNode = this.createStyleNode(tagName)
+          const textNodeWithSelectedText = createTextNode(selectedText)
 
-          wrapperNode.append(selectedText)
+          wrapperNode.append(textNodeWithSelectedText)
           selectedTextNode.replaceWith(notSelectedText, wrapperNode)
-          updatedSelectedNodes.push(wrapperNode.firstChild)
+          updatedSelectedNodes.push(textNodeWithSelectedText)
         }
 
         if (isLastNode) {
@@ -351,10 +353,11 @@ export class Editor {
           const selectedText = selectedTextNode.data.slice(0, endOffset)
           const notSelectedText = selectedTextNode.data.slice(endOffset, selectedTextNode.length)
           const wrapperNode = this.createStyleNode(tagName)
+          const textNodeWithSelectedText = createTextNode(selectedText)
 
-          wrapperNode.append(selectedText)
+          wrapperNode.append(textNodeWithSelectedText)
           selectedTextNode.replaceWith(wrapperNode, notSelectedText)
-          updatedSelectedNodes.push(wrapperNode.firstChild)
+          updatedSelectedNodes.push(textNodeWithSelectedText)
         }
       }
     }
@@ -526,12 +529,12 @@ export class Editor {
     const styleNode = document.createElement("SPAN")
     styleNode.setAttribute("data-tag", tagName)
 
-    this.addStylesForHeading(styleNode, tagName)
+    this.addStyles(styleNode, tagName)
 
     return styleNode
   }
 
-  addStylesForHeading = (node, tagName, shouldInlineStyles) => {
+  addStyles = (node, tagName, shouldInlineStyles) => {
     if (shouldInlineStyles) {
       const cssRule = Editor.DOCUMENT_CSS_RULES.find((cssRule) =>
         cssRule.selectorText.endsWith(Editor.TAG_TO_CLASS_NAME_MAP[tagName])
