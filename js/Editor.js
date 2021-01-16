@@ -1,20 +1,17 @@
-import {
-  createTextNode,
-  getNodesBetween,
-  getParentNodeWithTag,
-  getParentsTags,
-  getTextNodes,
-} from './domUtils'
+import { createTextNode, getNodesBetween, getParentNodeWithTag, getParentsTags, getTextNodes } from "./domUtils"
 import { getRange, getSelection, selectRange } from "./selectionUtils"
 
 export class Editor {
-  static DOCUMENT_CSS_RULES = Array.from(document.styleSheets).reduce((rules, styleSheet) => rules.concat(Array.from(styleSheet.cssRules)), [])
+  static DOCUMENT_CSS_RULES = Array.from(document.styleSheets).reduce(
+    (rules, styleSheet) => rules.concat(Array.from(styleSheet.cssRules)),
+    []
+  )
 
   static TAG_TO_CLASS_NAME_MAP = {
-    H1: 'header1-text',
-    H2: 'header2-text',
-    B: 'bold-text',
-    I: 'italic-text',
+    H1: "header1-text",
+    H2: "header2-text",
+    B: "bold-text",
+    I: "italic-text",
   }
 
   constructor({ editorNode, rootFontSize, isDev = false }) {
@@ -42,8 +39,8 @@ export class Editor {
       }
     })
 
-    this.editorNode.addEventListener('copy', this.createHandleCutCopy(false))
-    this.editorNode.addEventListener('cut', this.createHandleCutCopy(true))
+    this.editorNode.addEventListener("copy", this.createHandleCutCopy(false))
+    this.editorNode.addEventListener("cut", this.createHandleCutCopy(true))
 
     if (this.isDev) {
       this.editorNode.addEventListener("input", () => {
@@ -222,8 +219,8 @@ export class Editor {
 
     const selection = getSelection()
     const selectedDocumentFragment = getRange().cloneContents()
-    const div  = document.createElement('div')
-    const result = Array.from(selectedDocumentFragment.childNodes).map(childNode => {
+    const div = document.createElement("div")
+    const result = Array.from(selectedDocumentFragment.childNodes).map((childNode) => {
       iterate(childNode)
 
       return childNode
@@ -231,8 +228,9 @@ export class Editor {
 
     div.append(...result)
 
-    e.clipboardData.setData('text/html', div.innerHTML)
-    console.log("div.innerHTML: ", div.innerHTML)
+    e.clipboardData.setData("text/html", div.innerHTML)
+
+    if (this.isDev) console.log("div.innerHTML: ", div.innerHTML)
 
     if (isCut) selection.deleteFromDocument()
 
@@ -516,14 +514,12 @@ export class Editor {
       node,
       tagName: "SPAN",
       rootNode,
-      additionalChecks: [
-        (parentNode) => parentNode.dataset.tag === tagName,
-      ],
+      additionalChecks: [(parentNode) => parentNode.dataset.tag === tagName],
     })
   }
 
   createStyleNode = (tagName) => {
-    if (tagName === 'DIV') {
+    if (tagName === "DIV") {
       return document.createElement(tagName)
     }
 
@@ -537,13 +533,15 @@ export class Editor {
 
   addStylesForHeading = (node, tagName, shouldInlineStyles) => {
     if (shouldInlineStyles) {
-      const cssRule = Editor.DOCUMENT_CSS_RULES.find(cssRule => cssRule.selectorText.endsWith(Editor.TAG_TO_CLASS_NAME_MAP[tagName]))
+      const cssRule = Editor.DOCUMENT_CSS_RULES.find((cssRule) =>
+        cssRule.selectorText.endsWith(Editor.TAG_TO_CLASS_NAME_MAP[tagName])
+      )
 
       for (let i = 0; i < cssRule.style.length; i++) {
         const styleName = cssRule.style[i]
         const styleValue = cssRule.style[styleName]
 
-        if (styleValue.endsWith('rem')) {
+        if (styleValue.endsWith("rem")) {
           const [value] = styleValue.match(/[a-z]+|[^a-z]+/gi)
 
           node.style[styleName] = `${value * this.rootFontSize.value}${this.rootFontSize.units}`

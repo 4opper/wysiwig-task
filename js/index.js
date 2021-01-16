@@ -1,5 +1,5 @@
 import { Editor } from "./Editor"
-import { getRootFontSize } from './domUtils'
+import { getRootFontSize } from "./domUtils"
 
 init()
 
