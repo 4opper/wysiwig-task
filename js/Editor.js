@@ -1,11 +1,26 @@
-import { createTextNode, getNodesBetween, getParentNodeWithTag, getParentsTags, getTextNodes } from "./domUtils"
+import {
+  createTextNode,
+  getNodesBetween,
+  getParentNodeWithTag,
+  getParentsTags,
+  getTextNodes,
+} from './domUtils'
 import { getRange, getSelection, selectRange } from "./selectionUtils"
 
 export class Editor {
-  constructor({ editorNode, isDev = false, defaultFontSize = 16 }) {
+  static DOCUMENT_CSS_RULES = Array.from(document.styleSheets).reduce((rules, styleSheet) => rules.concat(Array.from(styleSheet.cssRules)), [])
+
+  static TAG_TO_CLASS_NAME_MAP = {
+    H1: 'header1-text',
+    H2: 'header2-text',
+    B: 'bold-text',
+    I: 'italic-text',
+  }
+
+  constructor({ editorNode, rootFontSize, isDev = false }) {
     this.editorNode = editorNode
     this.isDev = isDev
-    this.defaultFontSize = defaultFontSize
+    this.rootFontSize = rootFontSize
   }
 
   init = () => {
@@ -26,6 +41,9 @@ export class Editor {
         }
       }
     })
+
+    this.editorNode.addEventListener('copy', this.createHandleCutCopy(false))
+    this.editorNode.addEventListener('cut', this.createHandleCutCopy(true))
 
     if (this.isDev) {
       this.editorNode.addEventListener("input", () => {
@@ -185,6 +203,40 @@ export class Editor {
       selectedTextNode.replaceWith(...replaceWithNodes)
       updatedSelectedNodes.push(wrapperNode.firstChild)
     }
+  }
+
+  createHandleCutCopy = (isCut) => (e) => {
+    const iterate = (node) => {
+      if (node.nodeType !== 3) {
+        if (node.dataset.tag) {
+          this.addStylesForHeading(node, node.dataset.tag, true)
+        }
+
+        if (node.childNodes) {
+          for (let i = 0; i < node.childNodes.length; i++) {
+            iterate(node.childNodes[i])
+          }
+        }
+      }
+    }
+
+    const selection = getSelection()
+    const selectedDocumentFragment = getRange().cloneContents()
+    const div  = document.createElement('div')
+    const result = Array.from(selectedDocumentFragment.childNodes).map(childNode => {
+      iterate(childNode)
+
+      return childNode
+    })
+
+    div.append(...result)
+
+    e.clipboardData.setData('text/html', div.innerHTML)
+    console.log("div.innerHTML: ", div.innerHTML)
+
+    if (isCut) selection.deleteFromDocument()
+
+    e.preventDefault()
   }
 
   handleMultipleTextNodesSelected = ({
@@ -462,22 +514,16 @@ export class Editor {
   getParentNodeWithTag = ({ node, tagName, rootNode }) => {
     return getParentNodeWithTag({
       node,
-      tagName: tagName === "H1" || tagName === "H2" ? "SPAN" : tagName,
+      tagName: "SPAN",
       rootNode,
       additionalChecks: [
-        (parentNode) => {
-          if (tagName === "H1" || tagName === "H2") {
-            return parentNode.dataset.tag === tagName
-          }
-
-          return true
-        },
+        (parentNode) => parentNode.dataset.tag === tagName,
       ],
     })
   }
 
   createStyleNode = (tagName) => {
-    if (tagName !== "H1" && tagName !== "H2") {
+    if (tagName === 'DIV') {
       return document.createElement(tagName)
     }
 
@@ -489,13 +535,24 @@ export class Editor {
     return styleNode
   }
 
-  addStylesForHeading = (node, tagName) => {
-    node.style.fontWeight = "bold"
+  addStylesForHeading = (node, tagName, shouldInlineStyles) => {
+    if (shouldInlineStyles) {
+      const cssRule = Editor.DOCUMENT_CSS_RULES.find(cssRule => cssRule.selectorText.endsWith(Editor.TAG_TO_CLASS_NAME_MAP[tagName]))
 
-    if (tagName === "H1") {
-      node.style.fontSize = `${this.defaultFontSize * 2}px`
-    } else if (tagName === "H2") {
-      node.style.fontSize = `${this.defaultFontSize * 1.5}px`
+      for (let i = 0; i < cssRule.style.length; i++) {
+        const styleName = cssRule.style[i]
+        const styleValue = cssRule.style[styleName]
+
+        if (styleValue.endsWith('rem')) {
+          const [value] = styleValue.match(/[a-z]+|[^a-z]+/gi)
+
+          node.style[styleName] = `${value * this.rootFontSize.value}${this.rootFontSize.units}`
+        } else {
+          node.style[styleName] = styleValue
+        }
+      }
+    } else {
+      node.classList.add(Editor.TAG_TO_CLASS_NAME_MAP[tagName])
     }
   }
 }

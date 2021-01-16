@@ -67,6 +67,14 @@ export function getTextNodes(node) {
   return recursor(node)
 }
 
+export function getRootFontSize() {
+  const htmlNode = document.querySelector('html')
+  const cssFontSize = window.getComputedStyle(htmlNode).fontSize
+  const [value, units] = cssFontSize.match(/[a-z]+|[^a-z]+/gi)
+
+  return { value, units }
+}
+
 function isDescendant(parent, child) {
   return parent.contains(child)
 }
